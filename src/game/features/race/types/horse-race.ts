@@ -49,7 +49,6 @@ export type LiveHorseProgress = {
   distance: number
   distanceToFinish: number
   estimatedSecondsToFinish: number | null
-  finishedAtTick: number | null
 }
 
 export type HorseOption = {

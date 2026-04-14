@@ -26,3 +26,8 @@ export type RaceReplayStorePort = {
   consumeReplayRequest: () => ReplayRequest | null
   setReplayRequest: (payload: ReplayRequest) => void
 }
+
+export type RaceCanvasPorts = {
+  profileBetsStore: ProfileBetsStorePort
+  raceHistoryStore: RaceHistoryStorePort
+}
