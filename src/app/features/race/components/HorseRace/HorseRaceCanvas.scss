@@ -55,11 +55,13 @@
   }
 
   &__horse-card {
+    display: flex;
+    flex-direction: column;
     border: 1px solid rgba(0, 0, 0, 0.8);
     border-radius: 10px;
     background: rgba(22, 22, 22, 0.94);
     padding: 1rem;
-    display: grid;
+    align-items: center;
     gap: 0.25rem;
     justify-items: center;
     cursor: pointer;
@@ -80,17 +82,26 @@
     }
   }
 
+  &__horse-container {
+    display: flex;
+    flex-direction: column;
+    grid-gap: 0;
+  }
+
   &__horse-idle-canvas {
     width: 88px;
     height: auto;
     image-rendering: pixelated;
+    transform: translateX(-7px);
+    margin-top: -20px;
   }
 
   &__horse-card-name {
     color: #f0f0f0;
-    font-size: 0.73rem;
+    font-size: 0.8rem;
     text-align: center;
     line-height: 1.15;
+    margin-top: 12px;
   }
 
   &__center {
@@ -519,6 +530,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -529,6 +541,7 @@
     transform: translateY(12px) scale(0.98);
     opacity: 0;
   }
+
   to {
     transform: translateY(0) scale(1);
     opacity: 1;
