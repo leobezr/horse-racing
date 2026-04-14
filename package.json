@@ -6,11 +6,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "jest --watch",
+    "test:run": "jest --runInBand",
     "lint": "eslint \"src/**/*.{ts,vue}\"",
     "lint:fix": "eslint \"src/**/*.{ts,vue}\" --fix",
     "guardrails": "node ./scripts/guardrails.mjs",
     "typecheck": "vue-tsc --noEmit",
-    "verify": "yarn lint && yarn typecheck && yarn guardrails"
+    "verify": "yarn lint && yarn typecheck && yarn test:run && yarn guardrails"
   },
   "repository": {
     "type": "git",
@@ -33,6 +35,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/jest": "^30.0.0",
     "@types/seedrandom": "^3.0.8",
     "@typescript-eslint/eslint-plugin": "^8.58.2",
     "@typescript-eslint/parser": "^8.58.2",
@@ -40,7 +43,9 @@
     "eslint": "^10.2.0",
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^17.5.0",
+    "jest": "^30.3.0",
     "sass": "^1.99.0",
+    "ts-jest": "^29.4.9",
     "typescript": "^6.0.2",
     "vite": "^8.0.8",
     "vite-plugin-vuetify": "^2.1.3",
