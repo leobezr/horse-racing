@@ -32,8 +32,8 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { useRaceHistoryStore } from '../../../../game/features/race-history/state/race-history-store'
-import type { RaceHistoryEntry } from '../../../../game/features/race-history/types/race-history'
+import { useRaceHistoryStore } from '../../../../shared/pinia/race-history-store'
+import type { RaceHistoryEntry } from '../types/race-history'
 
 const router = useRouter()
 const raceHistoryStore = useRaceHistoryStore()
