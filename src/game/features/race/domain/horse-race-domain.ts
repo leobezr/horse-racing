@@ -4,6 +4,9 @@ import type { DeterministicRng } from '../types/rng'
 import { horseAssetConfig, horseMaskColorTokens, horseWalkFrameIndices } from '../infrastructure/horse-assets'
 
 const styleNamePool = [
+  'Cream',
+  'Gelato',
+  'Vanilla',
   'Comet',
   'Ranger',
   'Nova',
@@ -24,6 +27,7 @@ const styleNamePool = [
   'Glide',
   'Phantom',
   'Turbo',
+  'Buttercup',
 ]
 
 const clampColorChannel = (value: number): number => Math.max(0, Math.min(255, value))
@@ -33,10 +37,9 @@ const toHexColor = (color: { red: number; green: number; blue: number }): string
     .map((channel) => clampColorChannel(channel).toString(16).padStart(2, '0'))
     .join('')}`
 
-const buildHorseName = (rng: DeterministicRng, horseIndex: number): string => {
-  const first = styleNamePool[rng.randomInt(0, styleNamePool.length - 1)]
-  const second = styleNamePool[rng.randomInt(0, styleNamePool.length - 1)]
-  return `${first} ${second} ${horseIndex + 1}`
+const buildHorseName = (rng: DeterministicRng, collection: string[]): string => {
+  const horseName = collection.splice(rng.randomInt(0, collection.length - 1), 1)[0]
+  return horseName
 }
 
 const createHorseColors = (rng: DeterministicRng): HorseColorMap => {
@@ -172,29 +175,67 @@ const getRoundSpeedMultiplier = (roundNumber: number): number => {
   return fallbackMultiplier ?? 1
 }
 
+const getRoundTrackDistance = (roundNumber: number): number => {
+  const configuredDistance = gameConfig.rounds.trackDistances[roundNumber - 1]
+  if (configuredDistance !== undefined) {
+    return configuredDistance
+  }
+
+  const fallbackDistance = gameConfig.rounds.trackDistances[gameConfig.rounds.trackDistances.length - 1]
+  if (fallbackDistance !== undefined) {
+    return fallbackDistance
+  }
+
+  return gameConfig.track.width - gameConfig.track.finishLineOffset
+}
+
+const getNormalizedBaseSpeed = (baseSpeed: number): number => {
+  const speedRange = gameConfig.simulation.baseSpeedMax - gameConfig.simulation.baseSpeedMin
+  if (speedRange <= 0) {
+    return 0.5
+  }
+
+  return (baseSpeed - gameConfig.simulation.baseSpeedMin) / speedRange
+}
+
 const calculateTickDistance = ({
   horse,
   horseState,
   rng,
   roundMultiplier,
   roundSprintCount,
+  roundTick,
+  ticksPerRound,
+  roundFinishDistance,
 }: {
   horse: HorseOption
   horseState: RaceStateEntry
   rng: DeterministicRng
   roundMultiplier: number
   roundSprintCount: number
+  roundTick: number
+  ticksPerRound: number
+  roundFinishDistance: number
 }): { distance: number; sprintApplied: boolean } => {
   const accelerationRoll = rng.randomFloat(0, 1)
   const sprintRoll = rng.randomFloat(0, 1)
 
-  let tickDistance =
-    (horse.stats.baseSpeed + horse.stats.accelerationBias * accelerationRoll * gameConfig.simulation.accelerationWeight) * roundMultiplier
+  const remainingTicks = Math.max(1, ticksPerRound - roundTick)
+  const remainingDistance = Math.max(0, roundFinishDistance - horseState.distance)
+  const durationPace = remainingDistance / remainingTicks
+  const normalizedBaseSpeed = getNormalizedBaseSpeed(horse.stats.baseSpeed)
+
+  const baseSpeedFactor = 0.9 + normalizedBaseSpeed * 0.2
+  const accelerationFactor = 0.9 + horse.stats.accelerationBias * accelerationRoll * 0.2
+  const staminaFactor = 0.9 + horse.stats.stamina * 0.15
+
+  let tickDistance = durationPace * baseSpeedFactor * accelerationFactor * staminaFactor * roundMultiplier
 
   const hasActiveSprint = horseState.sprintTicksRemaining > 0
   if (hasActiveSprint) {
     horseState.sprintTicksRemaining -= 1
-    tickDistance += rng.randomFloat(gameConfig.simulation.sprintBonusMin, gameConfig.simulation.sprintBonusMax)
+    const sprintPercentBoost = rng.randomFloat(gameConfig.simulation.sprintBonusMin, gameConfig.simulation.sprintBonusMax) / 100
+    tickDistance *= 1 + sprintPercentBoost
     return {
       distance: tickDistance,
       sprintApplied: false,
@@ -206,7 +247,8 @@ const calculateTickDistance = ({
 
   if (sprintApplied) {
     horseState.sprintTicksRemaining = gameConfig.simulation.sprintDurationTicks - 1
-    tickDistance += rng.randomFloat(gameConfig.simulation.sprintBonusMin, gameConfig.simulation.sprintBonusMax)
+    const sprintPercentBoost = rng.randomFloat(gameConfig.simulation.sprintBonusMin, gameConfig.simulation.sprintBonusMax) / 100
+    tickDistance *= 1 + sprintPercentBoost
   }
 
   return {
@@ -318,14 +360,16 @@ const createMetadataByHorseId = (racingState: RaceStateEntry[]): RaceResult['met
 
 export const createHorseOptions = (rng: DeterministicRng): HorseOption[] => {
   const options: HorseOption[] = []
+  const horseNames = [...styleNamePool]
 
   for (let index = 0; index < horseAssetConfig.totalHorseOptions; index += 1) {
     const laneNumber = index + 1
     const stats = createHorseBaseStats(rng)
+
     options.push({
       id: `horse-${laneNumber}`,
       laneNumber,
-      name: buildHorseName(rng, index),
+      name: buildHorseName(rng, horseNames),
       colors: createHorseColors(rng),
       stats,
       odds: {
@@ -368,91 +412,91 @@ export const runDeterministicRace = ({ horses, rng }: { horses: HorseOption[]; r
   const raceSnapshots: RaceResult['raceSnapshots'] = []
   const roundSummaries: RaceResult['roundSummaries'] = []
   const horseById = new Map(horses.map((horse) => [horse.id, horse]))
-  const racingState = createInitialRaceState(horses)
 
   const ticksPerRound = Math.floor((gameConfig.rounds.secondsPerRound * 1000) / gameConfig.animation.tickMs)
-  const totalTicks = gameConfig.rounds.count * ticksPerRound
-  const finishDistance = gameConfig.track.width - gameConfig.track.finishLineOffset
+  let finishDistance = getRoundTrackDistance(gameConfig.rounds.count)
 
-  let roundIndex = 0
   let roundStartTick = 0
-  let previousDistanceByHorseId = new Map(horses.map((horse) => [horse.id, 0]))
-  let sprintCountByHorseId = new Map(horses.map((horse) => [horse.id, 0]))
+  let lastRoundRacingState = createInitialRaceState(horses)
+  let lastRoundWinnerId: string | null = null
 
-  for (let tick = 0; tick < totalTicks; tick += 1) {
-    const roundNumber = Math.min(gameConfig.rounds.count, Math.floor(tick / ticksPerRound) + 1)
+  for (let roundNumber = 1; roundNumber <= gameConfig.rounds.count; roundNumber += 1) {
+    finishDistance = getRoundTrackDistance(roundNumber)
     const roundMultiplier = getRoundSpeedMultiplier(roundNumber)
+    const racingState = createInitialRaceState(horses)
+    const previousDistanceByHorseId = new Map(horses.map((horse) => [horse.id, 0]))
+    const sprintCountByHorseId = new Map(horses.map((horse) => [horse.id, 0]))
+    const currentRoundStartTick = raceSnapshots.length
 
-    for (const horseState of racingState) {
-      if (horseState.finishedAtTick !== null) {
-        continue
+    for (let roundTick = 0; roundTick < ticksPerRound; roundTick += 1) {
+      for (const horseState of racingState) {
+        if (horseState.finishedAtTick !== null) {
+          continue
+        }
+
+        const horse = horseById.get(horseState.id)
+        if (!horse) {
+          continue
+        }
+
+        const roundSprintCount = sprintCountByHorseId.get(horse.id) ?? 0
+        const tickResult = calculateTickDistance({
+          horse,
+          horseState,
+          rng,
+          roundMultiplier,
+          roundSprintCount,
+          roundTick,
+          ticksPerRound,
+          roundFinishDistance: finishDistance,
+        })
+
+        if (tickResult.sprintApplied) {
+          horseState.sprintCount += 1
+          sprintCountByHorseId.set(horse.id, roundSprintCount + 1)
+        }
+
+        horseState.distance += tickResult.distance
+        horseState.tickSpeedSamples.push(tickResult.distance)
+
+        if (horseState.distance >= finishDistance) {
+          horseState.distance = finishDistance
+          horseState.finishedAtTick = roundTick
+        }
       }
 
-      const horse = horseById.get(horseState.id)
-      if (!horse) {
-        continue
-      }
+      raceSnapshots.push(createRaceSnapshot(racingState))
 
-      const roundSprintCount = sprintCountByHorseId.get(horse.id) ?? 0
-      const tickResult = calculateTickDistance({
-        horse,
-        horseState,
-        rng,
-        roundMultiplier,
-        roundSprintCount,
-      })
-
-      if (tickResult.sprintApplied) {
-        horseState.sprintCount += 1
-        sprintCountByHorseId.set(horse.id, roundSprintCount + 1)
-      }
-
-      horseState.distance += tickResult.distance
-      horseState.tickSpeedSamples.push(tickResult.distance)
-
-      if (horseState.distance >= finishDistance) {
-        horseState.distance = finishDistance
-        horseState.finishedAtTick = tick
-      }
-    }
-
-    raceSnapshots.push(createRaceSnapshot(racingState))
-
-    const hasRoundEnded = (tick + 1) % ticksPerRound === 0
-    if (hasRoundEnded) {
-      roundIndex += 1
-      roundSummaries.push(
-        createRoundSummary({
-          horses,
-          racingState,
-          previousDistanceByHorseId,
-          sprintCountByHorseId,
-          roundNumber,
-          startTick: roundStartTick,
-          endTick: tick,
-        }),
-      )
-
-      previousDistanceByHorseId = new Map(racingState.map((horseState) => [horseState.id, horseState.distance]))
-      sprintCountByHorseId = new Map(horses.map((horse) => [horse.id, 0]))
-      roundStartTick = tick + 1
-
-      if (roundIndex >= gameConfig.rounds.count) {
+      const allFinished = racingState.every((horseState) => horseState.finishedAtTick !== null)
+      if (allFinished) {
         break
       }
     }
 
-    const allFinished = racingState.every((horseState) => horseState.finishedAtTick !== null)
-    if (allFinished) {
-      break
-    }
+    const roundEndTick = raceSnapshots.length - 1
+    roundSummaries.push(
+      createRoundSummary({
+        horses,
+        racingState,
+        previousDistanceByHorseId,
+        sprintCountByHorseId,
+        roundNumber,
+        startTick: currentRoundStartTick,
+        endTick: roundEndTick,
+      }),
+    )
+
+    roundStartTick = roundEndTick + 1
+    lastRoundRacingState = racingState
+    lastRoundWinnerId = pickWinnerId({ racingState, horses })
   }
 
   return {
-    winnerId: pickWinnerId({ racingState, horses }),
+    winnerId: lastRoundWinnerId,
+    finishDistance,
     raceSnapshots,
     roundSummaries,
-    metadataByHorseId: createMetadataByHorseId(racingState),
+    metadataByHorseId: createMetadataByHorseId(lastRoundRacingState),
   }
 }
 
