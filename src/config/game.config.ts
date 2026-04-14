@@ -1,13 +1,24 @@
-import type { GameConfig } from '../types/config'
+import type { GameConfig } from './types/config'
 
 export const gameConfig: GameConfig = {
   defaultRaceSeed: 20260414,
   totalHorseOptions: 20,
+  raceHorseCount: 10,
+  betting: {
+    initialCredit: 15000,
+    chipValues: [500, 1500, 3000, 5000, 10000, 15000, 20000, 25000, 50000, 100000],
+    oddsOverround: 1.15,
+  },
+  rounds: {
+    count: 6,
+    secondsPerRound: 15,
+    speedMultipliers: [0.96, 1, 1.03, 0.99, 1.05, 1.08],
+  },
   track: {
     width: 980,
-    height: 620,
+    height: 520,
     lanePaddingX: 88,
-    laneStartY: 108,
+    laneStartY: 88,
     laneGap: 24,
     finishLineOffset: 120,
   },
@@ -19,9 +30,10 @@ export const gameConfig: GameConfig = {
     baseSpeedMin: 6,
     baseSpeedMax: 10,
     accelerationWeight: 0.55,
-    burstChance: 0.08,
-    burstBonusMin: 2,
-    burstBonusMax: 6,
-    maxTicks: 700,
+    sprintChance: 0.18,
+    sprintBonusMin: 2,
+    sprintBonusMax: 6,
+    sprintDurationTicks: 4,
+    maxTicks: 900,
   },
 }
