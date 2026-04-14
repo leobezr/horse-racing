@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { loadRaceHistoryFromStorage, saveRaceHistoryToStorage } from '../../app/features/race-history/infrastructure/local-storage-race-history'
-import type { RaceHistoryEntry } from '../types/race-history'
+import type { RaceHistoryEntry } from '../../app/features/race-history/types/race-history'
 
 const createEntryId = (): string => `race-${Date.now()}-${Math.floor(Math.random() * 1000000)}`
 

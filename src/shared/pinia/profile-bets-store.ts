@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { gameConfig } from '../../config/game.config'
 import { loadBetsFromStorage, saveBetsToStorage } from '../../app/features/profile/infrastructure/local-storage-profile-bets'
-import type { BetEntry } from '../types/profile-bets'
+import type { BetEntry } from '../../app/features/profile/types/profile-bets'
 
 const createBetId = (): string => `bet-${Date.now()}-${Math.floor(Math.random() * 1000000)}`
 const initialCredit = gameConfig.betting.initialCredit
