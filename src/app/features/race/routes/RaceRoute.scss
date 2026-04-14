@@ -1,0 +1,10 @@
+.route {
+  display: grid;
+  gap: 0.85rem;
+
+  &__title {
+    margin: 0;
+    font-size: 1.15rem;
+    color: #f3f3f3;
+  }
+}

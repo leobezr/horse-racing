@@ -1,0 +1,48 @@
+.history {
+  border: 1px solid rgba(204, 66, 227, 0.36);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(18, 18, 18, 0.92) 0%, rgba(12, 12, 12, 0.96) 100%);
+  padding: 1rem;
+
+  &__title {
+    margin: 0 0 0.5rem;
+    color: #f3f3f3;
+  }
+
+  &__text {
+    margin: 0 0 0.85rem;
+    color: #c7c7c7;
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+  }
+
+  &__item {
+    border: 1px solid rgba(204, 66, 227, 0.28);
+    border-radius: 10px;
+    background: rgba(20, 20, 20, 0.88);
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__item-content {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  &__line {
+    margin: 0;
+    color: #cdcdcd;
+    font-size: 0.9rem;
+  }
+}
+
+:global(.history .v-btn.history__replay-button) {
+  text-transform: none;
+  letter-spacing: 0;
+}
