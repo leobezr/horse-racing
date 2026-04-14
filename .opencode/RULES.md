@@ -67,3 +67,21 @@ If rules conflict, resolve in this order:
 
 - Use Yarn for local development and CI commands.
 - Do not introduce npm-based workflow commands in docs, scripts, or examples.
+
+## 10) Language, style, and workflow policy
+
+- TypeScript is mandatory for application source files.
+- Prefer arrow functions by default; use `function` declarations only when hoisting is explicitly required.
+- Development flow is TDD-first: RED -> GREEN for new behavior and bug fixes.
+
+## 11) UI and game boundary policy
+
+- Website interface (Vue routes/components/layout) must live under `src/app`.
+- Canvas/game engine logic must live under `src/game`.
+- `src/app` may orchestrate and render game features, but core simulation and rendering behavior stays in `src/game`.
+
+## 12) Folder architecture policy
+
+- Use Layered Architecture with feature-based modularization for both app and game domains.
+- Organize by feature first, then by layer (`domain`, `application`, `infrastructure`, `presentation`, `state` when needed).
+- Avoid dumping cross-feature files into broad shared folders unless genuinely reusable.

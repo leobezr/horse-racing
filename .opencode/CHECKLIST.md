@@ -34,3 +34,15 @@ Use this checklist before finalizing any task.
 
 - [ ] Yarn is used for install, run, and build/test commands.
 - [ ] No npm command usage added to project docs or automation.
+
+## Language and workflow
+
+- [ ] Source changes use TypeScript.
+- [ ] Arrow functions are preferred unless hoisting is required.
+- [ ] TDD RED -> GREEN flow is followed for new behavior and fixes.
+
+## Boundaries and structure
+
+- [ ] UI/routes/components live under `src/app`.
+- [ ] Canvas/game logic lives under `src/game`.
+- [ ] Feature modules follow layered architecture (`domain`, `application`, `infrastructure`, `presentation`, `state` as needed).
