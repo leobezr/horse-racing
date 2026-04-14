@@ -29,6 +29,8 @@ Use this checklist before finalizing any task.
 - [ ] Naming is explicit and intention-revealing.
 - [ ] No dead code, duplicated logic, or unnecessary abstractions.
 - [ ] Changes are understandable and maintainable.
+- [ ] No one-liner function/control-flow implementations were introduced.
+- [ ] Ternary usage is only for simple single-line value selection.
 
 ## Tooling
 

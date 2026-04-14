@@ -73,6 +73,8 @@ If rules conflict, resolve in this order:
 - TypeScript is mandatory for application source files.
 - Prefer arrow functions by default; use `function` declarations only when hoisting is explicitly required.
 - Development flow is TDD-first: RED -> GREEN for new behavior and bug fixes.
+- One-liner implementations are forbidden for function bodies and control-flow blocks; use explicit multi-line blocks.
+- Ternary expressions are forbidden unless the full expression is a simple value selection that fits on a single line.
 
 ## 11) UI and game boundary policy
 
