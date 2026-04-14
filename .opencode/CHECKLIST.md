@@ -48,3 +48,17 @@ Use this checklist before finalizing any task.
 - [ ] UI/routes/components live under `src/app`.
 - [ ] Canvas/game logic lives under `src/game`.
 - [ ] Feature modules follow layered architecture (`domain`, `application`, `infrastructure`, `presentation`, `state` as needed).
+
+## Placement and reuse scope
+
+- [ ] Usage scope was checked before using `shared`.
+- [ ] App-only modules remain near `src/app` consumers.
+- [ ] Game-only modules remain near `src/game` consumers.
+- [ ] `shared` is used only for true cross-boundary reuse (app + game) or justified multi-context reuse.
+- [ ] YAGNI respected: no premature centralization.
+
+## Flux store exception
+
+- [ ] Pinia stores are centralized in `src/shared/pinia`.
+- [ ] No feature-local Pinia stores exist under `src/app/features/*`.
+- [ ] No feature-local Pinia stores exist under `src/game/features/*`.

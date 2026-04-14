@@ -86,7 +86,21 @@ If rules conflict, resolve in this order:
 - Organize by feature first, then by layer (`domain`, `application`, `infrastructure`, `presentation`, `state` when needed).
 - Avoid dumping cross-feature files into broad shared folders unless genuinely reusable.
 
-## 13) Lint and completion policy
+## 13) Module placement and YAGNI policy
+
+- Before placing a file in `shared`, verify actual usage scope.
+- If code is used only by `src/app`, keep it under `src/app` close to the consuming feature/module.
+- If code is used only by `src/game`, keep it under `src/game` close to the consuming feature/module.
+- Move code to `shared` only when it is used by both app and game (or multiple bounded contexts) and duplication would be worse.
+- Treat premature centralization as a YAGNI violation.
+
+## 14) Flux store exception policy
+
+- Flux-pattern stores (Pinia) are a deliberate exception to local-first placement.
+- Pinia stores must be centralized under `src/shared/pinia` as the application source-of-truth layer.
+- Do not create feature-local Pinia store folders under `src/app/features/*` or `src/game/features/*`.
+
+## 15) Lint and completion policy
 
 - ESLint configuration must be present and maintained (`eslint.config.js`).
 - Every completion pass must run linting before finalizing work.
