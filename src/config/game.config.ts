@@ -13,6 +13,7 @@ export const gameConfig: GameConfig = {
     count: 6,
     secondsPerRound: 15,
     speedMultipliers: [0.96, 1, 1.03, 0.99, 1.05, 1.08],
+    trackDistances: [1200, 1400, 1600, 1800, 2000, 2200],
   },
   track: {
     width: 800,
