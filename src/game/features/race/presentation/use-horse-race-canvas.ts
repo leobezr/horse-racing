@@ -1,29 +1,33 @@
 import { computed, nextTick, onBeforeUnmount, ref } from "vue";
 import { gameConfig } from "../../../../config/game.config";
+import type { ReplayRequest } from "../../../../shared/types/replay-request";
+import { createRacePoolPreview } from "../application/race-session-service";
+import { createPreRaceCountdownController } from "./lib/pre-race-countdown";
+import { createRaceSessionBuilder } from "./lib/race-session-builder";
+import { createTrackCanvasRenderer } from "./lib/track-canvas-renderer";
+
 import type {
   HorseOption,
   LiveHorseProgress,
   LiveRaceRound,
   RaceSession,
 } from "../types/horse-race";
-import type { ReplayRequest } from "../../../../shared/types/replay-request";
+
+import {
+  createFrameVisibleBoundsReader,
+  getFallbackFrameVisibleBounds,
+} from "./lib/frame-visible-bounds-cache";
+
 import type {
   ProfileBetsStorePort,
   RaceHistoryStorePort,
   RaceReplayStorePort,
 } from "../types/race-canvas-ports";
-import { createRacePoolPreview } from "../application/race-session-service";
+
 import {
   createLiveHorseProgress,
   createLiveRaceRound,
 } from "./lib/live-race-metrics";
-import {
-  createFrameVisibleBoundsReader,
-  getFallbackFrameVisibleBounds,
-} from "./lib/frame-visible-bounds-cache";
-import { createPreRaceCountdownController } from "./lib/pre-race-countdown";
-import { createRaceSessionBuilder } from "./lib/race-session-builder";
-import { createTrackCanvasRenderer } from "./lib/track-canvas-renderer";
 
 const getStatusMessageBeforeSession = ({
   selectedHorseId,
