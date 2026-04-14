@@ -38,6 +38,9 @@
         <p class="profile__text" data-test="app-profile-bet-amount">
           Amount: {{ bet.amount }}
         </p>
+        <p class="profile__text" data-test="app-profile-bet-odds">
+          Odds: {{ bet.oddsLabel }}
+        </p>
         <p class="profile__text" data-test="app-profile-bet-result">
           Result: {{ bet.won ? "Won" : "Lost" }}
         </p>
