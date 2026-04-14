@@ -42,7 +42,7 @@
           Odds: {{ bet.oddsLabel }}
         </p>
         <p class="profile__text" data-test="app-profile-bet-result">
-          Result: {{ bet.won ? "Won" : "Lost" }}
+          Result: {{ getBetResultLabel(bet.won) }}
         </p>
         <p class="profile__text" data-test="app-profile-bet-payout">
           Payout: {{ bet.payout }}
@@ -53,14 +53,25 @@
 </template>
 
 <script setup lang="ts">
-import { useProfileBetsStore } from "../../../../game/features/profile/state/profile-bets-store";
+import { useProfileBetsStore } from '../../../../shared/pinia/profile-bets-store'
 
-const profileBetsStore = useProfileBetsStore();
-const orderedBets = profileBetsStore.orderedBets;
-const totalStake = profileBetsStore.totalStake;
-const totalPayout = profileBetsStore.totalPayout;
+const profileBetsStore = useProfileBetsStore()
+const orderedBets = profileBetsStore.orderedBets
+const totalStake = profileBetsStore.totalStake
+const totalPayout = profileBetsStore.totalPayout
 
-const formatTimestamp = (iso: string): string => new Date(iso).toLocaleString();
+const getBetResultLabel = (won: boolean): string => {
+  if (won) {
+    return 'Won'
+  }
+
+  return 'Lost'
+}
+
+const formatTimestamp = (iso: string): string => {
+  const date = new Date(iso)
+  return date.toLocaleString()
+}
 </script>
 
 <style scoped lang="scss" src="./ProfileRoute.scss"></style>
