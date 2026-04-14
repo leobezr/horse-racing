@@ -45,4 +45,12 @@ export default [
       'vue/attributes-order': 'off',
     },
   },
+  {
+    files: ['**/*.test.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
+    },
+  },
 ]

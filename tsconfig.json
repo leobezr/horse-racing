@@ -10,7 +10,7 @@
     "esModuleInterop": true,
     "useDefineForClassFields": true,
     "lib": ["ES2021", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"],
+    "types": ["vite/client", "jest"],
     "skipLibCheck": true,
     "noEmit": true
   },
