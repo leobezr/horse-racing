@@ -6,8 +6,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "lint": "eslint \"src/**/*.{ts,vue}\"",
+    "lint:fix": "eslint \"src/**/*.{ts,vue}\" --fix",
     "guardrails": "node ./scripts/guardrails.mjs",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "verify": "yarn lint && yarn typecheck && yarn guardrails"
   },
   "repository": {
     "type": "git",
@@ -29,12 +32,19 @@
     "vuetify": "^4.0.5"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/seedrandom": "^3.0.8",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
+    "@typescript-eslint/parser": "^8.58.2",
     "@vitejs/plugin-vue": "^6.0.6",
+    "eslint": "^10.2.0",
+    "eslint-plugin-vue": "^10.8.0",
+    "globals": "^17.5.0",
     "sass": "^1.99.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.8",
     "vite-plugin-vuetify": "^2.1.3",
+    "vue-eslint-parser": "^10.4.0",
     "vue-tsc": "^3.2.6"
   }
 }
