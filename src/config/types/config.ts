@@ -15,6 +15,7 @@ export type GameConfig = {
     count: number
     secondsPerRound: number
     speedMultipliers: number[]
+    trackDistances: number[]
   }
   track: {
     width: number
