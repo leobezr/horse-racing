@@ -4,7 +4,7 @@
   --app-route-transition-ms: 260ms;
   --app-easing-standard: cubic-bezier(0.22, 1, 0.36, 1);
 
-  min-height: 100vh;
+  max-height: 100vh;
   display: grid;
   gap: 1.25rem;
   align-content: start;
