@@ -34,6 +34,8 @@ Use this checklist before finalizing any task.
 
 - [ ] Yarn is used for install, run, and build/test commands.
 - [ ] No npm command usage added to project docs or automation.
+- [ ] Lint passes (`yarn lint`) before completion.
+- [ ] Final verification run (`yarn verify`) before handing off work.
 
 ## Language and workflow
 

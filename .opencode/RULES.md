@@ -85,3 +85,9 @@ If rules conflict, resolve in this order:
 - Use Layered Architecture with feature-based modularization for both app and game domains.
 - Organize by feature first, then by layer (`domain`, `application`, `infrastructure`, `presentation`, `state` when needed).
 - Avoid dumping cross-feature files into broad shared folders unless genuinely reusable.
+
+## 13) Lint and completion policy
+
+- ESLint configuration must be present and maintained (`eslint.config.js`).
+- Every completion pass must run linting before finalizing work.
+- Default finish command: `yarn verify` (runs lint + typecheck + guardrails).
