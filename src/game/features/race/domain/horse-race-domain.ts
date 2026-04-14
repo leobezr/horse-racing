@@ -351,13 +351,13 @@ export const createHorseOptions = (rng: DeterministicRng): HorseOption[] => {
 
 export const createTrackLanes = (): TrackLane[] => {
   const lanes: TrackLane[] = []
-  const laneHeight = Math.floor((gameConfig.track.height - gameConfig.track.laneStartY - 80) / gameConfig.raceHorseCount)
+  const laneHeight = Math.floor((gameConfig.track.height - gameConfig.track.laneStartY - 15) / gameConfig.raceHorseCount)
 
   for (let index = 0; index < gameConfig.raceHorseCount; index += 1) {
     lanes.push({
       laneNumber: index + 1,
       y: gameConfig.track.laneStartY + index * laneHeight,
-      height: laneHeight - 2,
+      height: laneHeight,
     })
   }
 

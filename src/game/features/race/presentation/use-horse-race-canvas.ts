@@ -334,7 +334,7 @@ export const useHorseRaceCanvas = ({
     selectedHorseIdOverride?: string,
   ): Promise<void> => {
     const selectedHorseInput = selectedHorseIdOverride ?? selectedHorseId.value;
-    if (!canBuildSession({ selectedHorseInput })) {
+    if (!canBuildSession({ selectedHorseInput }) || selectedHorseInput === null) {
       return;
     }
 

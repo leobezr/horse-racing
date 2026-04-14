@@ -23,6 +23,7 @@ export type GameConfig = {
     laneStartY: number
     laneGap: number
     finishLineOffset: number
+    horseAlignmentBoxSize: number
   }
   animation: {
     tickMs: number
