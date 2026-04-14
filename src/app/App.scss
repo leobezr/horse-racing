@@ -1,0 +1,26 @@
+.app {
+  min-height: 100vh;
+  display: grid;
+  gap: 1.25rem;
+  align-content: start;
+  padding: 1.25rem;
+  background: radial-gradient(circle at 20% 0%, #f8f4da 0%, #ebe2c6 55%, #ddcfa8 100%);
+  color: #251d12;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', sans-serif;
+
+  &__header {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: clamp(1.5rem, 4.5vw, 2.3rem);
+    line-height: 1.15;
+  }
+
+  &__subtitle {
+    margin: 0;
+    color: #4b3d28;
+  }
+}
