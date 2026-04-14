@@ -8,9 +8,9 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useRaceReplayStore } from '../../../../game/features/replay/state/race-replay-store'
+import { useRaceReplayStore } from '../../../../shared/pinia/race-replay-store'
 import type { ReplayQuery } from '../types/replay-query'
-import HorseRaceCanvas from '../components/HorseRaceCanvas.vue'
+import { HorseRaceCanvas } from '../components/HorseRace'
 
 const route = useRoute()
 const raceReplayStore = useRaceReplayStore()

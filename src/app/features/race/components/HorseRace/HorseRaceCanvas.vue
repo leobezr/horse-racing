@@ -294,9 +294,16 @@
 import { computed, onMounted } from 'vue'
 import { useHorseRaceCanvas } from '../../../../../game/features/race/presentation/use-horse-race-canvas'
 import type { HorseOption } from '../../../../../game/features/race/types/horse-race'
+import { useProfileBetsStore } from '../../../../../shared/pinia/profile-bets-store'
+import { useRaceHistoryStore } from '../../../../../shared/pinia/race-history-store'
+import { useRaceReplayStore } from '../../../../../shared/pinia/race-replay-store'
 import { useHorseIdlePreviews } from './lib/use-horse-idle-previews'
 import { useHorseStatusModal } from './lib/use-horse-status-modal'
 import { useRaceSetupModal } from './lib/use-race-setup-modal'
+
+const profileBetsStore = useProfileBetsStore()
+const raceHistoryStore = useRaceHistoryStore()
+const raceReplayStore = useRaceReplayStore()
 
 const {
   canvasRef,
@@ -322,7 +329,11 @@ const {
   showPreRaceCountdown,
   preRaceCountdownValue,
   preRaceCountdownLabel,
-} = useHorseRaceCanvas()
+} = useHorseRaceCanvas({
+  profileBetsStore,
+  raceHistoryStore,
+  raceReplayStore,
+})
 
 const {
   isRaceSetupModalOpen,
