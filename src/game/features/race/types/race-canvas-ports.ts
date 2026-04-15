@@ -3,6 +3,8 @@ import type { ReplayRequest } from '../../../../shared/types/replay-request'
 export type ProfileBetsStorePort = {
   availableCredit: number
   canPlaceBetAmount: (amount: number) => boolean
+  reserveBetAmount: (amount: number) => boolean
+  releaseReservedBetAmount: (amount: number) => void
   addResolvedBet: (payload: {
     raceId: string
     horseId: string
