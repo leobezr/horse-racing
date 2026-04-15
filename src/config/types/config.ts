@@ -34,10 +34,19 @@ export type GameConfig = {
     baseSpeedMin: number
     baseSpeedMax: number
     accelerationWeight: number
+    accelerationVarianceWeight: number
     sprintChance: number
     sprintBonusMin: number
     sprintBonusMax: number
     sprintDurationTicks: number
+    staminaDrainMin: number
+    staminaDrainMax: number
+    staminaFatigueWeight: number
+    burstChance: number
+    burstDurationTicksMin: number
+    burstDurationTicksMax: number
+    burstMultiplierMin: number
+    burstMultiplierMax: number
     maxTicks: number
   }
 }
