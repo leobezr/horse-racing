@@ -32,6 +32,15 @@ export default [
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
+      'max-lines-per-function': [
+        'error',
+        {
+          max: 30,
+          skipBlankLines: true,
+          skipComments: true,
+          IIFEs: true,
+        },
+      ],
       'no-unused-vars': 'off',
       'prefer-const': 'error',
       'arrow-body-style': ['error', 'always'],
