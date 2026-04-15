@@ -4,7 +4,9 @@ import { gameConfig } from '../../config/game.config'
 import { loadBetsFromStorage, saveBetsToStorage } from '../../app/features/profile/infrastructure/local-storage-profile-bets'
 import type { BetEntry } from '../../app/features/profile/types/profile-bets'
 
-const createBetId = (): string => `bet-${Date.now()}-${Math.floor(Math.random() * 1000000)}`
+const createBetId = (): string => {
+  return `bet-${Date.now()}-${Math.floor(Math.random() * 1000000)}`
+}
 const initialCredit = gameConfig.betting.initialCredit
 
 const calculateFixedPayout = (bet: number, num: number, den: number): number => {
@@ -14,12 +16,46 @@ const calculateFixedPayout = (bet: number, num: number, den: number): number => 
 
 export const useProfileBetsStore = defineStore('profile-bets', () => {
   const bets = ref<BetEntry[]>(loadBetsFromStorage())
+  const reservedCredit = ref<number>(0)
 
-  const orderedBets = computed(() => [...bets.value].sort((left, right) => right.createdAtIso.localeCompare(left.createdAtIso)))
-  const totalStake = computed(() => bets.value.reduce((sum, bet) => sum + bet.amount, 0))
-  const totalPayout = computed(() => bets.value.reduce((sum, bet) => sum + bet.payout, 0))
-  const availableCredit = computed(() => initialCredit + totalPayout.value - totalStake.value)
-  const canPlaceBetAmount = (amount: number): boolean => amount > 0 && amount <= availableCredit.value
+  const orderedBets = computed(() => {
+    return [...bets.value].sort((left, right) => {
+      return right.createdAtIso.localeCompare(left.createdAtIso)
+    })
+  })
+  const totalStake = computed(() => {
+    return bets.value.reduce((sum, bet) => {
+      return sum + bet.amount
+    }, 0)
+  })
+  const totalPayout = computed(() => {
+    return bets.value.reduce((sum, bet) => {
+      return sum + bet.payout
+    }, 0)
+  })
+  const availableCredit = computed(() => {
+    return initialCredit + totalPayout.value - totalStake.value - reservedCredit.value
+  })
+  const canPlaceBetAmount = (amount: number): boolean => {
+    return amount > 0 && amount <= availableCredit.value
+  }
+
+  const reserveBetAmount = (amount: number): boolean => {
+    if (!canPlaceBetAmount(amount)) {
+      return false
+    }
+
+    reservedCredit.value += amount
+    return true
+  }
+
+  const releaseReservedBetAmount = (amount: number): void => {
+    if (amount <= 0) {
+      return
+    }
+
+    reservedCredit.value = Math.max(0, reservedCredit.value - amount)
+  }
 
   const addResolvedBet = (payload: {
     raceId: string
@@ -35,7 +71,10 @@ export const useProfileBetsStore = defineStore('profile-bets', () => {
     }
 
     const won = payload.winnerHorseId !== null && payload.horseId === payload.winnerHorseId
-    const payout = won ? calculateFixedPayout(payload.amount, payload.oddsNumerator, payload.oddsDenominator) : 0
+    let payout = 0
+    if (won) {
+      payout = calculateFixedPayout(payload.amount, payload.oddsNumerator, payload.oddsDenominator)
+    }
     const nextEntry: BetEntry = {
       id: createBetId(),
       raceId: payload.raceId,
@@ -62,6 +101,8 @@ export const useProfileBetsStore = defineStore('profile-bets', () => {
     totalPayout,
     availableCredit,
     canPlaceBetAmount,
+    reserveBetAmount,
+    releaseReservedBetAmount,
     addResolvedBet,
   }
 })
