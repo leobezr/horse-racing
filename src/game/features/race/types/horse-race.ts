@@ -80,6 +80,9 @@ export type RaceStateEntry = {
   finishedAtTick: number | null
   sprintCount: number
   sprintTicksRemaining: number
+  staminaReserve: number
+  burstTicksRemaining: number
+  activeBurstMultiplier: number
 }
 
 export type RaceResult = {
