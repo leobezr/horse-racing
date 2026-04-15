@@ -23,7 +23,7 @@
                 variant="text"
                 @click="selectAndShowHorseStatus(horse.id)"
               >
-                <div class="game__horse-container">  
+                <div class="game__horse-container">
                   <canvas
                     class="game__horse-idle-canvas"
                     data-test="app-horse-idle-canvas"
@@ -64,7 +64,7 @@
             </v-btn>
 
             <p class="game__credit" data-test="app-race-credit">
-              Credit: {{ availableCredit }}
+              Credit: {{ NumberNormalizer(availableCredit) }}
             </p>
 
             <div class="game__chips" data-test="app-race-chip-list">
@@ -363,7 +363,13 @@
             class="game__setup-subtitle"
             data-test="app-race-setup-modal-subtitle"
           >
-            Select one or more horses before race start
+            <template v-if="isAwaitingBetweenRoundsBet">
+              Halftime: pick one or more horses. Next round starts in
+              {{ betweenRoundsCountdownValue ?? 0 }}s.
+            </template>
+            <template v-else>
+              Select one or more horses before race start
+            </template>
           </p>
         </header>
 
@@ -374,7 +380,9 @@
               :key="`setup-${horse.id}`"
               class="game__setup-horse"
               :data-selected="String(pendingRaceHorseIds.includes(horse.id))"
+              :data-disabled="String(isSetupHorseDisabled(horse.id))"
               data-test="app-race-setup-horse"
+              :disabled="isSetupHorseDisabled(horse.id)"
               rounded="pill"
               @click="togglePendingRaceHorse(horse.id)"
             >
@@ -468,7 +476,10 @@
             rounded="pill"
             @click="startRaceWithPendingHorse"
           >
-            Next
+            <template v-if="isAwaitingBetweenRoundsBet">
+              Next - {{ betweenRoundsCountdownValue ?? 0 }}
+            </template>
+            <template v-else> Next </template>
           </v-btn>
         </footer>
       </v-card>
@@ -543,14 +554,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, watch } from "vue";
-import { useHorseRaceCanvas } from "../../../../../game/features/race/presentation/use-horse-race-canvas";
-import type { HorseOption } from "../../../../../game/features/race/types/horse-race";
-import { useProfileBetsStore } from "../../../../../shared/pinia/profile-bets-store";
-import { useRaceHistoryStore } from "../../../../../shared/pinia/race-history-store";
-import { useRaceReplayStore } from "../../../../../shared/pinia/race-replay-store";
+import { useHorseRaceCanvas } from "@/game/features/race/presentation/use-horse-race-canvas";
+import type { HorseOption } from "@/game/features/race/types/horse-race";
+import { useProfileBetsStore } from "@/shared/pinia/profile-bets-store";
+import { useRaceHistoryStore } from "@/shared/pinia/race-history-store";
+import { useRaceReplayStore } from "@/shared/pinia/race-replay-store";
 import { useHorseIdlePreviews } from "./lib/use-horse-idle-previews";
 import { useHorseStatusModal } from "./lib/use-horse-status-modal";
 import { useRaceSetupModal } from "./lib/use-race-setup-modal";
+import { NumberNormalizer } from "@/app/utils/number-normalizer";
 
 const profileBetsStore = useProfileBetsStore();
 const raceHistoryStore = useRaceHistoryStore();
@@ -579,6 +591,7 @@ const {
   liveRaceRound,
   liveHorseProgress,
   isAwaitingBetweenRoundsBet,
+  betweenRoundsCountdownValue,
   submitBetweenRoundsSelection,
   showPreRaceCountdown,
   preRaceCountdownValue,
@@ -615,13 +628,27 @@ const { bindIdleCanvas } = useHorseIdlePreviews({
   renderSheets,
 });
 
-const pendingHorsePreview = computed<HorseOption | null>(
-  () =>
-    horseOptions.value.find((horse) =>
-      pendingRaceHorseIds.value.includes(horse.id),
-    ) ??
-    null,
-);
+const pendingHorsePreview = computed<HorseOption | null>(() => {
+  return (
+    horseOptions.value.find((horse) => {
+      return pendingRaceHorseIds.value.includes(horse.id);
+    }) ?? null
+  );
+});
+
+const isSetupHorseDisabled = (horseId: string): boolean => {
+  if (pendingRaceHorseIds.value.includes(horseId)) {
+    return false;
+  }
+
+  if (stakeAmount.value < 1) {
+    return true;
+  }
+
+  const nextHorseCount = pendingRaceHorseIds.value.length + 1;
+  const totalStake = stakeAmount.value * nextHorseCount;
+  return totalStake > availableCredit.value;
+};
 
 const selectAndShowHorseStatus = async (horseId: string): Promise<void> => {
   await openHorseStatus(horseId);
@@ -649,9 +676,12 @@ const startRaceWithPendingHorse = async (): Promise<void> => {
 };
 
 watch(
-  () => isAwaitingBetweenRoundsBet.value,
+  () => {
+    return isAwaitingBetweenRoundsBet.value;
+  },
   (isAwaiting) => {
     if (!isAwaiting) {
+      closeRaceSetupModal();
       return;
     }
 
