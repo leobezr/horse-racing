@@ -62,5 +62,8 @@ export default [
         ...globals.jest,
       },
     },
+    rules: {
+      'max-lines-per-function': 'off',
+    },
   },
 ]
