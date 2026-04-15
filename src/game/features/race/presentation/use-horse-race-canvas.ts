@@ -212,18 +212,18 @@ export const useHorseRaceCanvas = ({
     session,
     tickIndex,
     snapshotByHorseId,
-    finishDistance,
+    raceFinishDistance,
   }: {
     session: RaceSession;
     tickIndex: number;
     snapshotByHorseId: Map<string, number>;
-    finishDistance: number;
+    raceFinishDistance: number;
   }): void => {
     liveRaceRound.value = createLiveRaceRound({ tickIndex });
     liveHorseProgress.value = createLiveHorseProgress({
       horses: session.horses,
       snapshotByHorseId,
-      finishDistance,
+      finishDistance: raceFinishDistance,
       tickIndex,
     });
   };
@@ -262,14 +262,13 @@ export const useHorseRaceCanvas = ({
     const snapshotByHorseId = new Map(
       snapshot.map((entry) => [entry.id, entry.distance]),
     );
-    const finishDistance =
-      gameConfig.track.width - gameConfig.track.finishLineOffset;
+    const raceFinishDistance = session.race.finishDistance;
 
     updateLiveRaceMetrics({
       session,
       tickIndex,
       snapshotByHorseId,
-      finishDistance,
+      raceFinishDistance,
     });
 
     renderSessionFrame({
@@ -278,7 +277,7 @@ export const useHorseRaceCanvas = ({
       tickIndex,
       elapsedMs,
       snapshotByHorseId,
-      finishDistance,
+      raceFinishDistance,
     });
 
     const hasNextFrame = shouldAnimateNextFrame({

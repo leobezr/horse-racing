@@ -4,6 +4,105 @@ import { horseAssetConfig } from '../../infrastructure/horse-assets'
 import type { FrameVisibleBounds } from '../../types/frame-visible-bounds'
 import type { HorseOption, RaceSession } from '../../types/horse-race'
 
+const podiumLaneColors = [
+  colorTokens.track.podiumGold,
+  colorTokens.track.podiumSilver,
+  colorTokens.track.podiumBronze,
+] as const
+
+export const getPodiumLaneMap = ({
+  session,
+  snapshotByHorseId,
+}: {
+  session: RaceSession
+  snapshotByHorseId: Map<string, number>
+}): Map<number, number> => {
+  const orderedByDistance = [...session.horses].sort((left, right) => {
+    const leftDistance = snapshotByHorseId.get(left.id) ?? 0
+    const rightDistance = snapshotByHorseId.get(right.id) ?? 0
+
+    if (rightDistance !== leftDistance) {
+      return rightDistance - leftDistance
+    }
+
+    return left.laneNumber - right.laneNumber
+  })
+
+  const podiumLaneMap = new Map<number, number>()
+  for (let index = 0; index < Math.min(3, orderedByDistance.length); index += 1) {
+    const horse = orderedByDistance[index]
+    podiumLaneMap.set(horse.laneNumber, index + 1)
+  }
+
+  return podiumLaneMap
+}
+
+const getFinalPodiumLaneMap = (session: RaceSession): Map<number, number> => {
+  const lastRoundSummary = session.race.roundSummaries[session.race.roundSummaries.length - 1]
+  if (!lastRoundSummary) {
+    return new Map<number, number>()
+  }
+
+  const podiumLaneMap = new Map<number, number>()
+  for (let index = 0; index < Math.min(3, lastRoundSummary.horseResults.length); index += 1) {
+    const horseResult = lastRoundSummary.horseResults[index]
+    podiumLaneMap.set(horseResult.laneNumber, index + 1)
+  }
+
+  return podiumLaneMap
+}
+
+const drawLivePodiumLaneBackground = ({
+  context,
+  lane,
+  podiumRank,
+}: {
+  context: CanvasRenderingContext2D
+  lane: RaceSession['lanes'][number]
+  podiumRank: number
+}): void => {
+  const podiumColor = podiumLaneColors[podiumRank - 1]
+  if (!podiumColor) {
+    return
+  }
+
+  context.save()
+  context.globalAlpha = 0.38
+  context.fillStyle = podiumColor
+  context.fillRect(
+    gameConfig.track.lanePaddingX,
+    lane.y + 1,
+    gameConfig.track.width - gameConfig.track.lanePaddingX * 2,
+    Math.max(1, lane.height - 2),
+  )
+  context.restore()
+}
+
+const drawPodiumRankMarker = ({
+  context,
+  lane,
+  podiumRank,
+}: {
+  context: CanvasRenderingContext2D
+  lane: RaceSession['lanes'][number]
+  podiumRank: number
+}): void => {
+  const markerSize = 20
+  const markerX = gameConfig.track.lanePaddingX + 6
+  const markerY = lane.y + Math.round((lane.height - markerSize) / 2)
+
+  context.fillStyle = colorTokens.track.podiumMarker
+  context.fillRect(markerX, markerY, markerSize, markerSize)
+
+  context.fillStyle = colorTokens.track.podiumMarkerText
+  context.font = 'bold 12px Trebuchet MS'
+  context.textAlign = 'center'
+  context.textBaseline = 'middle'
+  context.fillText(String(podiumRank), markerX + markerSize / 2, markerY + markerSize / 2)
+  context.textAlign = 'start'
+  context.textBaseline = 'alphabetic'
+}
+
 const drawTrackBackground = (context: CanvasRenderingContext2D): void => {
   const finishX = gameConfig.track.width - gameConfig.track.finishLineOffset
   context.fillStyle = colorTokens.track.base
@@ -34,6 +133,23 @@ const drawTrackBackground = (context: CanvasRenderingContext2D): void => {
   context.fillRect(finishX, gameConfig.track.laneStartY - 20, 7, gameConfig.track.height)
 }
 
+const getFinishLineX = (): number => gameConfig.track.width - gameConfig.track.finishLineOffset
+
+const getTrackDrawableDistance = (): number => Math.max(1, getFinishLineX() - gameConfig.track.lanePaddingX)
+
+const toCanvasDistance = ({
+  raceDistance,
+  raceFinishDistance,
+}: {
+  raceDistance: number
+  raceFinishDistance: number
+}): number => {
+  const safeFinishDistance = Math.max(1, raceFinishDistance)
+  const clampedRaceDistance = Math.min(safeFinishDistance, Math.max(0, raceDistance))
+  const ratio = clampedRaceDistance / safeFinishDistance
+  return ratio * getTrackDrawableDistance()
+}
+
 const getTickIndex = (elapsedMs: number, snapshotsCount: number): number => {
   const tickIndex = Math.floor(elapsedMs / gameConfig.animation.tickMs)
   return Math.min(Math.max(0, tickIndex), Math.max(0, snapshotsCount - 1))
@@ -50,18 +166,19 @@ const getHorseFrameIndex = (elapsedMs: number, horse: HorseOption): number => {
 
 const getHorseFrameToDraw = ({
   horse,
-  tickIndex,
+  currentDistance,
+  raceFinishDistance,
   elapsedMs,
   raceSnapshotsCount,
 }: {
   horse: HorseOption
-  tickIndex: number
+  currentDistance: number
+  raceFinishDistance: number
   elapsedMs: number
   raceSnapshotsCount: number
 }): number => {
-  const finishedAtTick = horse.metadata.finishedAtTick
-  const horseFinished = finishedAtTick !== null && tickIndex >= finishedAtTick
-  const isLastSnapshot = tickIndex === raceSnapshotsCount - 1
+  const horseFinished = currentDistance >= raceFinishDistance
+  const isLastSnapshot = raceSnapshotsCount <= 1
 
   if (horseFinished || isLastSnapshot) {
     return horseAssetConfig.idleFrameIndex
@@ -95,12 +212,12 @@ const getFrameVisibleBoundsForCanvas = ({
 
 const getHorseRenderPosition = ({
   lane,
-  clampedDistance,
+  clampedCanvasDistance,
   finishX,
   frameVisibleBounds,
 }: {
   lane: RaceSession['lanes'][number]
-  clampedDistance: number
+  clampedCanvasDistance: number
   finishX: number
   frameVisibleBounds: FrameVisibleBounds
 }): {
@@ -109,7 +226,7 @@ const getHorseRenderPosition = ({
   laneCenterY: number
 } => {
   const maxVisibleHorseX = Math.max(gameConfig.track.lanePaddingX, finishX - frameVisibleBounds.width)
-  const visibleHorseX = Math.min(maxVisibleHorseX, gameConfig.track.lanePaddingX + clampedDistance)
+  const visibleHorseX = Math.min(maxVisibleHorseX, gameConfig.track.lanePaddingX + clampedCanvasDistance)
   const alignmentBoxHeight = Math.min(gameConfig.track.horseAlignmentBoxSize, frameVisibleBounds.height)
   const alignmentTop = frameVisibleBounds.top + frameVisibleBounds.height - alignmentBoxHeight
   const alignmentCenterY = alignmentTop + alignmentBoxHeight / 2
@@ -167,14 +284,14 @@ export const createTrackCanvasRenderer = ({
     tickIndex,
     elapsedMs,
     snapshotByHorseId,
-    finishDistance,
+    raceFinishDistance,
   }: {
     context: CanvasRenderingContext2D
     session: RaceSession
     tickIndex: number
     elapsedMs: number
     snapshotByHorseId: Map<string, number>
-    finishDistance: number
+    raceFinishDistance: number
   }) => void
 } => {
   const renderEmptyTrack = (canvas: HTMLCanvasElement | null): void => {
@@ -196,31 +313,50 @@ export const createTrackCanvasRenderer = ({
     tickIndex,
     elapsedMs,
     snapshotByHorseId,
-    finishDistance,
+    raceFinishDistance,
   }: {
     context: CanvasRenderingContext2D
     session: RaceSession
     tickIndex: number
     elapsedMs: number
     snapshotByHorseId: Map<string, number>
-    finishDistance: number
+    raceFinishDistance: number
   }): void => {
-    const finishX = finishDistance
+    const finishX = getFinishLineX()
     const horseByLaneNumber = new Map(session.horses.map((horse) => [horse.laneNumber, horse]))
+    const isRaceFinished = tickIndex >= Math.max(0, session.race.raceSnapshots.length - 1)
+    const livePodiumLaneMap = getPodiumLaneMap({
+      session,
+      snapshotByHorseId,
+    })
+    const finalPodiumLaneMap = getFinalPodiumLaneMap(session)
 
     drawTrackBackground(context)
 
     for (const lane of session.lanes) {
+      const livePodiumRank = livePodiumLaneMap.get(lane.laneNumber)
+      if (livePodiumRank !== undefined) {
+        drawLivePodiumLaneBackground({
+          context,
+          lane,
+          podiumRank: livePodiumRank,
+        })
+      }
+
       const laneHorse = horseByLaneNumber.get(lane.laneNumber)
       if (!laneHorse) {
         continue
       }
 
       const distance = snapshotByHorseId.get(laneHorse.id) ?? 0
-      const clampedDistance = Math.min(finishDistance, Math.max(0, distance))
+      const clampedCanvasDistance = toCanvasDistance({
+        raceDistance: distance,
+        raceFinishDistance,
+      })
       const frameToDraw = getHorseFrameToDraw({
         horse: laneHorse,
-        tickIndex,
+        currentDistance: distance,
+        raceFinishDistance,
         elapsedMs,
         raceSnapshotsCount: session.race.raceSnapshots.length,
       })
@@ -235,7 +371,7 @@ export const createTrackCanvasRenderer = ({
 
       const { x, y, laneCenterY } = getHorseRenderPosition({
         lane,
-        clampedDistance,
+        clampedCanvasDistance,
         finishX,
         frameVisibleBounds,
       })
@@ -250,6 +386,15 @@ export const createTrackCanvasRenderer = ({
         laneCenterY,
         isSelectedHorse: laneHorse.id === session.selectedHorseId,
       })
+
+      const finalPodiumRank = finalPodiumLaneMap.get(lane.laneNumber)
+      if (isRaceFinished && finalPodiumRank !== undefined) {
+        drawPodiumRankMarker({
+          context,
+          lane,
+          podiumRank: finalPodiumRank,
+        })
+      }
     }
   }
 
