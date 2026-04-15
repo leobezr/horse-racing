@@ -16,7 +16,7 @@ export const useHorseStatusModal = ({
   const statusFrameIntervalMs = 120
 
   const activeHorseStatus = computed<HorseOption | null>(
-    () => horseOptions.value.find((horse) => horse.id === activeHorseStatusId.value) ?? null,
+    () => {return horseOptions.value.find((horse) => {return horse.id === activeHorseStatusId.value}) ?? null},
   )
 
   const drawStatusFrame = (frameIndexOverride?: number): void => {

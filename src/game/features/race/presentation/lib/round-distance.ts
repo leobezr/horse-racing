@@ -12,7 +12,7 @@ export const getRoundFinishDistanceForTick = ({
   fallbackFinishDistance: number
 }): number => {
   const activeRoundSummary = roundSummaries.find(
-    (roundSummary) => tickIndex >= roundSummary.startTick && tickIndex <= roundSummary.endTick,
+    (roundSummary) => {return tickIndex >= roundSummary.startTick && tickIndex <= roundSummary.endTick},
   )
 
   if (!activeRoundSummary) {

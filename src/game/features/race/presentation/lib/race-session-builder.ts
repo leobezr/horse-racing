@@ -6,7 +6,7 @@ import type {
 } from "../../types/race-session-builder";
 
 const getSelectedHorseInput = (input: BuildRaceSessionInput): string | null =>
-  input.selectedHorseIdOverride ?? input.selectedHorseId;
+  {return input.selectedHorseIdOverride ?? input.selectedHorseId};
 
 const canBuildRaceSession = (input: BuildRaceSessionInput): boolean => {
   if (input.stakeAmount < 1) {

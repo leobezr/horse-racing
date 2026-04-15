@@ -21,9 +21,9 @@ export const useRaceSetupModal = () => {
   }
 
   const togglePendingRaceHorse = (horseId: string): void => {
-    const horseIndex = pendingRaceHorseIds.value.findIndex((id) => id === horseId)
+    const horseIndex = pendingRaceHorseIds.value.findIndex((id) => {return id === horseId})
     if (horseIndex >= 0) {
-      pendingRaceHorseIds.value = pendingRaceHorseIds.value.filter((id) => id !== horseId)
+      pendingRaceHorseIds.value = pendingRaceHorseIds.value.filter((id) => {return id !== horseId})
       return
     }
 

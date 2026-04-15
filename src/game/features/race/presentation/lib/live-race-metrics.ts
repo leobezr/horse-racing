@@ -42,9 +42,7 @@ export const createLiveHorseProgress = ({
     const averageSpeed = distance / tickCount
     const estimatedTicksToFinish = averageSpeed > 0 ? distanceToFinish / averageSpeed : Number.POSITIVE_INFINITY
     const estimatedSecondsToFinish =
-      Number.isFinite(estimatedTicksToFinish) && distanceToFinish > 0
-        ? Number.parseFloat(((estimatedTicksToFinish * gameConfig.animation.tickMs) / 1000).toFixed(2))
-        : null
+      Number.isFinite(estimatedTicksToFinish) && distanceToFinish > 0? Number.parseFloat(((estimatedTicksToFinish * gameConfig.animation.tickMs) / 1000).toFixed(2)): null
 
     return {
       id: horse.id,

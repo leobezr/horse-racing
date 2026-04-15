@@ -23,12 +23,12 @@ const colorDistance = (
 const getPaletteMap = (
   maskSourceColors: HorseColorMap,
   targetColors: HorseColorMap,
-): Array<{ source: { red: number; green: number; blue: number }; target: { red: number; green: number; blue: number } }> => [
+): Array<{ source: { red: number; green: number; blue: number }; target: { red: number; green: number; blue: number } }> => {return [
   { source: parseHexColor(maskSourceColors.primary), target: parseHexColor(targetColors.primary) },
   { source: parseHexColor(maskSourceColors.secondary), target: parseHexColor(targetColors.secondary) },
   { source: parseHexColor(maskSourceColors.tertiary), target: parseHexColor(targetColors.tertiary) },
   { source: parseHexColor(maskSourceColors.saddle), target: parseHexColor(targetColors.saddle) },
-]
+]}
 
 const getReplacementColor = (
   pixel: { red: number; green: number; blue: number },
@@ -49,12 +49,12 @@ const getReplacementColor = (
 }
 
 const loadImage = (path: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
+  {return new Promise((resolve, reject) => {
     const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error(`Failed loading image: ${path}`))
+    image.onload = () => {return resolve(image)}
+    image.onerror = () => {return reject(new Error(`Failed loading image: ${path}`))}
     image.src = path
-  })
+  })}
 
 const recolorMaskCanvas = ({
   maskImage,
@@ -156,12 +156,12 @@ export const buildHorseRenderSheets = ({
 
   for (const horse of horses) {
     byHorseId[horse.id] = loadedFramePairs.map(({ spriteImage, maskImage }) =>
-      composeHorseFrame({
+      {return composeHorseFrame({
         spriteImage,
         maskImage,
         maskSourceColors,
         targetColors: horse.colors,
-      }),
+      })},
     )
   }
 

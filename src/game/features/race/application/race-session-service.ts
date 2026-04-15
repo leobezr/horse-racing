@@ -16,12 +16,12 @@ const pickRaceHorses = ({
     return picked
   }
 
-  const selectedHorse = horses.find((horse) => horse.id === selectedHorseId)
+  const selectedHorse = horses.find((horse) => {return horse.id === selectedHorseId})
   if (!selectedHorse) {
     return picked
   }
 
-  const alreadyPicked = picked.some((horse) => horse.id === selectedHorse.id)
+  const alreadyPicked = picked.some((horse) => {return horse.id === selectedHorse.id})
   if (alreadyPicked) {
     return picked
   }
@@ -34,10 +34,10 @@ const pickRaceHorses = ({
 }
 
 const assignRaceLanes = (horses: HorseOption[]): HorseOption[] =>
-  horses.map((horse, index) => ({
+  {return horses.map((horse, index) => {return {
     ...horse,
     laneNumber: index + 1,
-  }))
+  }})}
 
 export const createRaceSession = async ({
   seedInput,
@@ -55,7 +55,7 @@ export const createRaceSession = async ({
     throw new Error('No race horses available to start session.')
   }
 
-  const selectedHorseExists = horses.some((horse) => horse.id === selectedId)
+  const selectedHorseExists = horses.some((horse) => {return horse.id === selectedId})
   const resolvedSelectedId = selectedHorseExists ? selectedId : horses[0].id
 
   for (const horse of horses) {

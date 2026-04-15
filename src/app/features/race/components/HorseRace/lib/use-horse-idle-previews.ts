@@ -27,7 +27,7 @@ export const useHorseIdlePreviews = ({
   const bindIdleCanvas = (node: Element | null, horseId: string): void => {
     if (node instanceof HTMLCanvasElement) {
       idleCanvasMap.set(horseId, node)
-      const horse = horseOptions.value.find((entry) => entry.id === horseId)
+      const horse = horseOptions.value.find((entry) => {return entry.id === horseId})
       if (horse) {
         drawIdleFrame(horse, node)
       }

@@ -1,1 +1,1 @@
-export { default as HorseRaceCanvas } from './HorseRaceCanvas.vue'
+export { default as HorseRaceCanvas } from './HorseRaceOrchestrator.vue'

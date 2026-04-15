@@ -57,7 +57,7 @@ import { appConfig } from '../../config/app.config'
 
 const route = useRoute()
 const appTitle = appConfig.appName
-const activeRouteName = computed(() => (typeof route.name === 'string' ? route.name : 'race'))
+const activeRouteName = computed(() => {return (typeof route.name === 'string' ? route.name : 'race')})
 </script>
 
 <style scoped lang="scss" src="./AppShell.scss"></style>

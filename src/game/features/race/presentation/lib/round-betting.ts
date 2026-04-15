@@ -36,7 +36,7 @@ export const resolveAutoStakeAmount = ({
     return previousStakeAmount
   }
 
-  const sortedChipValues = [...chipValues].sort((left, right) => left - right)
+  const sortedChipValues = [...chipValues].sort((left, right) => {return left - right})
   for (const chipValue of sortedChipValues) {
     if (canPlaceTotalBetAmount(chipValue * horseCount)) {
       return chipValue

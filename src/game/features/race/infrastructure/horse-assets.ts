@@ -26,5 +26,5 @@ export const horseFramePairs: HorseFramePair[] = [
 ]
 
 export const horseWalkFrameIndices = horseFramePairs
-  .map((_, index) => index)
-  .filter((index) => index !== horseAssetConfig.idleFrameIndex)
+  .map((_, index) => {return index})
+  .filter((index) => {return index !== horseAssetConfig.idleFrameIndex})

@@ -16,7 +16,7 @@ const route = useRoute()
 const raceReplayStore = useRaceReplayStore()
 
 watch(
-  () => route.query,
+  () => {return route.query},
   (query) => {
     const replayQuery: ReplayQuery = {
       replaySeed: typeof query.replaySeed === 'string' ? query.replaySeed : null,

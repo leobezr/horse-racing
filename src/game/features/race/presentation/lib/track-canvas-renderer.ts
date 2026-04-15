@@ -151,9 +151,9 @@ const drawTrackBackground = (context: CanvasRenderingContext2D): void => {
   context.fillRect(finishX, gameConfig.track.laneStartY - 20, 7, gameConfig.track.height)
 }
 
-const getFinishLineX = (): number => gameConfig.track.width - gameConfig.track.finishLineOffset
+const getFinishLineX = (): number => {return gameConfig.track.width - gameConfig.track.finishLineOffset}
 
-const getTrackDrawableDistance = (): number => Math.max(1, getFinishLineX() - gameConfig.track.lanePaddingX)
+const getTrackDrawableDistance = (): number => {return Math.max(1, getFinishLineX() - gameConfig.track.lanePaddingX)}
 
 const toCanvasDistance = ({
   raceDistance,
@@ -345,7 +345,7 @@ export const createTrackCanvasRenderer = ({
     highlightedHorseIds: Set<string>
   }): void => {
     const finishX = getFinishLineX()
-    const horseByLaneNumber = new Map(session.horses.map((horse) => [horse.laneNumber, horse]))
+    const horseByLaneNumber = new Map(session.horses.map((horse) => {return [horse.laneNumber, horse]}))
     const isRaceFinished = tickIndex >= Math.max(0, session.race.raceSnapshots.length - 1)
     const activeRoundFinishDistance = getRoundFinishDistanceForTick({
       tickIndex,

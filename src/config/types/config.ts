@@ -42,6 +42,10 @@ export type GameConfig = {
     staminaDrainMin: number
     staminaDrainMax: number
     staminaFatigueWeight: number
+    maxSpeedDecisionChance: number
+    maxSpeedBoostMin: number
+    maxSpeedBoostMax: number
+    longTrackStaminaScale: number
     burstChance: number
     burstDurationTicksMin: number
     burstDurationTicksMax: number

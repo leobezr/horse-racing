@@ -93,6 +93,19 @@ export type RaceResult = {
   metadataByHorseId: Record<string, Omit<HorseRuntimeMetadata, 'selectedByUser'>>
 }
 
+export type TickRolls = {
+  acceleration: number
+  sprint: number
+  burst: number
+  staminaDrain: number
+}
+
+export type RoundExecution = {
+  finishDistance: number
+  racingState: RaceStateEntry[]
+  summary: RaceRoundSummary
+}
+
 export type LiveRaceRound = {
   roundNumber: number
   roundSecondsRemaining: number

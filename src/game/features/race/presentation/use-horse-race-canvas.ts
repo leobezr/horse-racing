@@ -103,7 +103,7 @@ const getStatusMessageDuringSession = ({
   }
 
   const winner = session.horses.find(
-    (horse) => horse.id === session.race.winnerId,
+    (horse) => {return horse.id === session.race.winnerId},
   );
   if (!winner) {
     return "Race completed with no winner.";
@@ -186,11 +186,11 @@ export const useHorseRaceCanvas = ({
   const chipValues = gameConfig.betting.chipValues;
 
   const poolHorses = computed<HorseOption[]>(() =>
-    previewHorses.value.slice(0, gameConfig.raceHorseCount),
+    {return previewHorses.value.slice(0, gameConfig.raceHorseCount)},
   );
-  const renderSheets = computed(() => previewRenderSheets.value);
+  const renderSheets = computed(() => {return previewRenderSheets.value});
   const showPreRaceCountdown = computed<boolean>(
-    () => preRaceCountdownValue.value !== null,
+    () => {return preRaceCountdownValue.value !== null},
   );
 
   const statusMessage = computed<string>(() => {
@@ -274,7 +274,7 @@ export const useHorseRaceCanvas = ({
   }: {
     tickIndex: number;
     snapshotCount: number;
-  }): boolean => tickIndex < snapshotCount - 1;
+  }): boolean => {return tickIndex < snapshotCount - 1};
 
   const queueNextAnimationFrame = (): void => {
     animationFrameId.value = window.requestAnimationFrame(renderCurrentFrame);
@@ -332,7 +332,7 @@ export const useHorseRaceCanvas = ({
 
     for (const selectedBetHorseId of selectedBetHorseIds) {
       const selectedHorse = session.horses.find(
-        (horse) => horse.id === selectedBetHorseId,
+        (horse) => {return horse.id === selectedBetHorseId},
       );
       if (!selectedHorse) {
         continue;
@@ -518,7 +518,7 @@ export const useHorseRaceCanvas = ({
     );
     const snapshot = session.race.raceSnapshots[tickIndex] ?? [];
     const snapshotByHorseId = new Map(
-      snapshot.map((entry) => [entry.id, entry.distance]),
+      snapshot.map((entry) => {return [entry.id, entry.distance]}),
     );
     const raceFinishDistance = getRoundFinishDistanceForTick({
       tickIndex,
@@ -646,9 +646,7 @@ export const useHorseRaceCanvas = ({
     selectedHorseIdsOverride?: string[],
   ): Promise<void> => {
     const selectedHorseIds =
-      selectedHorseIdsOverride && selectedHorseIdsOverride.length > 0
-        ? [...selectedHorseIdsOverride]
-        : resolveAutoBetHorseIds({
+      selectedHorseIdsOverride && selectedHorseIdsOverride.length > 0? [...selectedHorseIdsOverride]: resolveAutoBetHorseIds({
             previousHorseIds: roundBetHorseIds.value,
             fallbackHorseId: selectedHorseId.value,
           });
@@ -668,7 +666,7 @@ export const useHorseRaceCanvas = ({
         stakeAmount: stakeAmount.value,
         canPlaceBetAmount: profileBetsStore.canPlaceBetAmount,
         poolSeed: poolSeed.value,
-        poolHorseIds: poolHorses.value.map((horse) => horse.id),
+        poolHorseIds: poolHorses.value.map((horse) => {return horse.id}),
         consumeReplayRequest: raceReplayStore.consumeReplayRequest,
       });
 
@@ -724,31 +722,29 @@ export const useHorseRaceCanvas = ({
       roundBetHorseIds.value = [...horseIds];
       selectedHorseId.value = horseIds[0] ?? null;
     },
-    availableCredit: computed(() => profileBetsStore.availableCredit),
+    availableCredit: computed(() => {return profileBetsStore.availableCredit}),
     stakeAmount,
     chipValues,
     selectChipAmount: (amount: number): void => {
       stakeAmount.value = amount;
     },
     canAffordChip: (amount: number): boolean =>
-      profileBetsStore.canPlaceBetAmount(
+      {return profileBetsStore.canPlaceBetAmount(
         getRoundBetTotalStake({
           horseCount: Math.max(1, roundBetHorseIds.value.length),
           stakePerHorse: amount,
         }),
-      ),
+      )},
     canStartRace: computed(
       () =>
-        poolHorses.value.length > 0 &&
+        {return poolHorses.value.length > 0 &&
         stakeAmount.value >= 1 &&
-        profileBetsStore.canPlaceBetAmount(stakeAmount.value),
+        profileBetsStore.canPlaceBetAmount(stakeAmount.value)},
     ),
     horseOptions: poolHorses,
     renderSheets,
     raceRoundSummaries: computed(() =>
-      isRaceConcluded.value
-        ? (raceSession.value?.race.roundSummaries ?? [])
-        : [],
+      {return isRaceConcluded.value? (raceSession.value?.race.roundSummaries ?? []): []},
     ),
     liveRaceRound,
     liveHorseProgress,

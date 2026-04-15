@@ -14,7 +14,7 @@ const toSeedText = (seedInput: number | string | undefined): string => {
 export const createDeterministicRng = (seedInput?: number | string): DeterministicRng => {
   const seedText = toSeedText(seedInput)
   const seeded = seedrandom(seedText)
-  const random = () => seeded.quick()
+  const random = () => {return seeded.quick()}
 
   return {
     seedText,
@@ -23,6 +23,6 @@ export const createDeterministicRng = (seedInput?: number | string): Determinist
       const randomValue = random()
       return Math.floor(randomValue * (maxInclusive - minInclusive + 1)) + minInclusive
     },
-    randomFloat: (minInclusive, maxExclusive) => random() * (maxExclusive - minInclusive) + minInclusive,
+    randomFloat: (minInclusive, maxExclusive) => {return random() * (maxExclusive - minInclusive) + minInclusive},
   }
 }

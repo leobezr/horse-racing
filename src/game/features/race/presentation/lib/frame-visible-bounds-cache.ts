@@ -7,12 +7,12 @@ const createFallbackFrameVisibleBounds = ({
 }: {
   width: number
   height: number
-}): FrameVisibleBounds => ({
+}): FrameVisibleBounds => {return {
   left: 0,
   top: 0,
   width,
   height,
-})
+}}
 
 const createInitialPixelBounds = ({
   width,
@@ -20,12 +20,12 @@ const createInitialPixelBounds = ({
 }: {
   width: number
   height: number
-}): PixelBoundsAccumulator => ({
+}): PixelBoundsAccumulator => {return {
   minX: width,
   minY: height,
   maxX: -1,
   maxY: -1,
-})
+}}
 
 const includePixelInBounds = ({
   pixelBounds,
@@ -61,12 +61,12 @@ const hasVisiblePixelBounds = (pixelBounds: PixelBoundsAccumulator): boolean => 
   return pixelBounds.maxY >= pixelBounds.minY
 }
 
-const toFrameVisibleBounds = (pixelBounds: PixelBoundsAccumulator): FrameVisibleBounds => ({
+const toFrameVisibleBounds = (pixelBounds: PixelBoundsAccumulator): FrameVisibleBounds => {return {
   left: pixelBounds.minX,
   top: pixelBounds.minY,
   width: pixelBounds.maxX - pixelBounds.minX + 1,
   height: pixelBounds.maxY - pixelBounds.minY + 1,
-})
+}}
 
 const hasVisiblePixelAt = ({
   pixelData,
@@ -171,4 +171,4 @@ export const getFallbackFrameVisibleBounds = ({
 }: {
   width: number
   height: number
-}): FrameVisibleBounds => createFallbackFrameVisibleBounds({ width, height })
+}): FrameVisibleBounds => {return createFallbackFrameVisibleBounds({ width, height })}

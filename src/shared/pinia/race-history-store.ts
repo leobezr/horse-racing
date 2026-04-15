@@ -3,12 +3,12 @@ import { computed, ref } from 'vue'
 import { loadRaceHistoryFromStorage, saveRaceHistoryToStorage } from '../../app/features/race-history/infrastructure/local-storage-race-history'
 import type { RaceHistoryEntry } from '../../app/features/race-history/types/race-history'
 
-const createEntryId = (): string => `race-${Date.now()}-${Math.floor(Math.random() * 1000000)}`
+const createEntryId = (): string => {return `race-${Date.now()}-${Math.floor(Math.random() * 1000000)}`}
 
 export const useRaceHistoryStore = defineStore('race-history', () => {
   const historyEntries = ref<RaceHistoryEntry[]>(loadRaceHistoryFromStorage())
 
-  const orderedEntries = computed(() => [...historyEntries.value].sort((left, right) => right.createdAtIso.localeCompare(left.createdAtIso)))
+  const orderedEntries = computed(() => {return [...historyEntries.value].sort((left, right) => {return right.createdAtIso.localeCompare(left.createdAtIso)})})
 
   const addRaceEntry = (payload: {
     seedText: string

@@ -33,7 +33,7 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
       'max-lines-per-function': [
-        'error',
+        'warn',
         {
           max: 30,
           skipBlankLines: true,

@@ -39,7 +39,7 @@ const router = useRouter()
 const raceHistoryStore = useRaceHistoryStore()
 const orderedEntries = raceHistoryStore.orderedEntries
 
-const formatTimestamp = (iso: string): string => new Date(iso).toLocaleString()
+const formatTimestamp = (iso: string): string => {return new Date(iso).toLocaleString()}
 
 const replayRace = (seedText: RaceHistoryEntry['seedText'], selectedHorseId: RaceHistoryEntry['selectedHorseId']): void => {
   void router.push({

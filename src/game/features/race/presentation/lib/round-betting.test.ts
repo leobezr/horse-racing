@@ -11,7 +11,7 @@ describe('resolveAutoStakeAmount', () => {
       previousStakeAmount: 5000,
       horseCount: 1,
       chipValues: [500, 1500, 5000],
-      canPlaceTotalBetAmount: (amount) => amount <= 6000,
+      canPlaceTotalBetAmount: (amount) => {return amount <= 6000},
     })
 
     expect(resolvedStake).toBe(5000)
@@ -22,7 +22,7 @@ describe('resolveAutoStakeAmount', () => {
       previousStakeAmount: 5000,
       horseCount: 1,
       chipValues: [500, 1500, 5000],
-      canPlaceTotalBetAmount: (amount) => amount <= 1000,
+      canPlaceTotalBetAmount: (amount) => {return amount <= 1000},
     })
 
     expect(resolvedStake).toBe(500)
@@ -33,7 +33,7 @@ describe('resolveAutoStakeAmount', () => {
       previousStakeAmount: 500,
       horseCount: 1,
       chipValues: [500, 1500, 5000],
-      canPlaceTotalBetAmount: () => false,
+      canPlaceTotalBetAmount: () => {return false},
     })
 
     expect(resolvedStake).toBe(0)
@@ -44,7 +44,7 @@ describe('resolveAutoStakeAmount', () => {
       previousStakeAmount: 500,
       horseCount: 3,
       chipValues: [500, 1500, 5000],
-      canPlaceTotalBetAmount: (amount) => amount <= 2000,
+      canPlaceTotalBetAmount: (amount) => {return amount <= 2000},
     })
 
     expect(resolvedStake).toBe(500)
