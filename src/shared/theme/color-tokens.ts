@@ -18,5 +18,10 @@ export const colorTokens = {
     finish: '#7f7f7f',
     laneTextDefault: '#bdbdbd',
     laneTextSelected: '#ffffff',
+    podiumGold: '#e6b400',
+    podiumSilver: '#a7adb7',
+    podiumBronze: '#a66a3a',
+    podiumMarker: '#f5f5f5',
+    podiumMarkerText: '#141414',
   },
 } as const
