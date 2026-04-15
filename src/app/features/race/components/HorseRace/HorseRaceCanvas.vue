@@ -363,7 +363,7 @@
             class="game__setup-subtitle"
             data-test="app-race-setup-modal-subtitle"
           >
-            Select 1 horse from 20 before race start
+            Select one or more horses before race start
           </p>
         </header>
 
@@ -373,10 +373,10 @@
               v-for="horse in horseOptions"
               :key="`setup-${horse.id}`"
               class="game__setup-horse"
-              :data-selected="String(horse.id === pendingRaceHorseId)"
+              :data-selected="String(pendingRaceHorseIds.includes(horse.id))"
               data-test="app-race-setup-horse"
               rounded="pill"
-              @click="selectPendingRaceHorse(horse.id)"
+              @click="togglePendingRaceHorse(horse.id)"
             >
               {{ horse.laneNumber }} - {{ horse.name }} -
               {{ (horse.odds.probability * 100).toFixed(1) }}%
@@ -426,6 +426,12 @@
             >
               Odds: {{ pendingHorsePreview.odds.label }}
             </p>
+            <p
+              class="game__setup-meta-line"
+              data-test="app-race-setup-horse-meta-line"
+            >
+              Selected horses: {{ pendingRaceHorseIds.length }}
+            </p>
           </section>
 
           <section
@@ -437,7 +443,7 @@
               class="game__setup-meta-line"
               data-test="app-race-setup-horse-meta-line"
             >
-              Select a horse to preview details.
+              Select one or more horses to preview details.
             </p>
           </section>
         </div>
@@ -458,7 +464,7 @@
           <v-btn
             class="game__setup-action game__setup-action--next"
             data-test="app-race-setup-next"
-            :disabled="pendingRaceHorseId === null || isLoading"
+            :disabled="pendingRaceHorseIds.length === 0 || isLoading"
             rounded="pill"
             @click="startRaceWithPendingHorse"
           >
@@ -536,7 +542,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, watch } from "vue";
 import { useHorseRaceCanvas } from "../../../../../game/features/race/presentation/use-horse-race-canvas";
 import type { HorseOption } from "../../../../../game/features/race/types/horse-race";
 import { useProfileBetsStore } from "../../../../../shared/pinia/profile-bets-store";
@@ -554,7 +560,8 @@ const {
   canvasRef,
   isLoading,
   selectedHorseId,
-  selectHorse,
+  selectedHorseIds,
+  selectHorseIds,
   availableCredit,
   chipValues,
   stakeAmount,
@@ -571,6 +578,8 @@ const {
   raceRoundSummaries,
   liveRaceRound,
   liveHorseProgress,
+  isAwaitingBetweenRoundsBet,
+  submitBetweenRoundsSelection,
   showPreRaceCountdown,
   preRaceCountdownValue,
   preRaceCountdownLabel,
@@ -582,12 +591,12 @@ const {
 
 const {
   isRaceSetupModalOpen,
-  pendingRaceHorseId,
+  pendingRaceHorseIds,
   openRaceSetupModal: openRaceSetup,
   closeRaceSetupModal,
   onRaceSetupModalModelUpdate,
-  selectPendingRaceHorse,
-  startRaceWithPendingHorse: startRaceWithSetupSelection,
+  togglePendingRaceHorse,
+  startRaceWithPendingHorses: startRaceWithSetupSelection,
 } = useRaceSetupModal();
 
 const {
@@ -608,7 +617,9 @@ const { bindIdleCanvas } = useHorseIdlePreviews({
 
 const pendingHorsePreview = computed<HorseOption | null>(
   () =>
-    horseOptions.value.find((horse) => horse.id === pendingRaceHorseId.value) ??
+    horseOptions.value.find((horse) =>
+      pendingRaceHorseIds.value.includes(horse.id),
+    ) ??
     null,
 );
 
@@ -617,17 +628,36 @@ const selectAndShowHorseStatus = async (horseId: string): Promise<void> => {
 };
 
 const openRaceSetupModal = (): void => {
-  openRaceSetup(selectedHorseId.value);
+  openRaceSetup(selectedHorseIds.value);
 };
 
 const startRaceWithPendingHorse = async (): Promise<void> => {
   await startRaceWithSetupSelection({
-    onStart: async (horseId) => {
-      selectHorse(horseId);
-      await buildSession(horseId);
+    onStart: async (horseIds) => {
+      selectHorseIds(horseIds);
+
+      if (isAwaitingBetweenRoundsBet.value) {
+        submitBetweenRoundsSelection({
+          horseIds,
+        });
+        return;
+      }
+
+      await buildSession(horseIds);
     },
   });
 };
+
+watch(
+  () => isAwaitingBetweenRoundsBet.value,
+  (isAwaiting) => {
+    if (!isAwaiting) {
+      return;
+    }
+
+    openRaceSetup(selectedHorseIds.value);
+  },
+);
 
 onMounted(async () => {
   await initializePool();
