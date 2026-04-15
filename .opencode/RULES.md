@@ -139,3 +139,12 @@ If rules conflict, resolve in this order:
 - Functions must be easy to read, cohesive, and separated by concern.
 - Functions should be limited to 30 lines (excluding comments and blank lines).
 - Use JSDoc on non-trivial exported functions/methods to explain intent and rationale (`why`), not mechanics (`what`).
+
+## 19) Vue component architecture policy
+
+- Vue components are split into two explicit types: `Orchestrator` and `Component`.
+- `Orchestrator` components compose existing components and coordinate data flow only.
+- `Orchestrator` components must not contain feature-specific rendering logic that belongs to leaf components.
+- `Component` files must implement one feature concern only (single responsibility).
+- Keep business/domain logic out of Vue components; use application/domain services for behavior.
+- Prefer naming that makes role explicit (example: `RaceBoardOrchestrator.vue`, `RaceBoardTableComponent.vue`).

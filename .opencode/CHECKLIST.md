@@ -26,6 +26,9 @@ Use this checklist before finalizing any task.
 - [ ] Component classes follow BEM.
 - [ ] Key elements include stable `data-test` attributes.
 - [ ] Test selectors are semantic and not text-coupled.
+- [ ] Vue component role is explicit: `Orchestrator` or `Component`.
+- [ ] Orchestrator component only composes/glues existing components.
+- [ ] Each component has one feature concern (SOLID/SRP).
 
 ## Code quality
 
