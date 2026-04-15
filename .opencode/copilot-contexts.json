@@ -1,0 +1,20 @@
+{
+  "developer": {
+    "trigger": "default implementation work",
+    "must": [
+      "tdd_red_green_refactor",
+      "coverage_100_lines_statements_functions_branches",
+      "function_max_30_lines",
+      "jsdoc_why_not_what",
+      "separation_of_concerns"
+    ]
+  },
+  "orchestrator": {
+    "trigger": "architecture decision",
+    "must": [
+      "clean_architecture_boundaries",
+      "dependency_direction_inward",
+      "no_event_driven_callbacks_outside_vue_components"
+    ]
+  }
+}
