@@ -26,6 +26,12 @@ export const getPodiumLaneMap = ({
       return rightDistance - leftDistance
     }
 
+    const leftFinishedAtTick = left.metadata.finishedAtTick ?? Number.MAX_SAFE_INTEGER
+    const rightFinishedAtTick = right.metadata.finishedAtTick ?? Number.MAX_SAFE_INTEGER
+    if (leftFinishedAtTick !== rightFinishedAtTick) {
+      return leftFinishedAtTick - rightFinishedAtTick
+    }
+
     return left.laneNumber - right.laneNumber
   })
 
@@ -39,15 +45,26 @@ export const getPodiumLaneMap = ({
 }
 
 const getFinalPodiumLaneMap = (session: RaceSession): Map<number, number> => {
-  const lastRoundSummary = session.race.roundSummaries[session.race.roundSummaries.length - 1]
-  if (!lastRoundSummary) {
-    return new Map<number, number>()
-  }
+  const orderedByFinish = [...session.horses].sort((left, right) => {
+    const leftDistance = left.metadata.finalDistance
+    const rightDistance = right.metadata.finalDistance
+    if (rightDistance !== leftDistance) {
+      return rightDistance - leftDistance
+    }
+
+    const leftFinishedAtTick = left.metadata.finishedAtTick ?? Number.MAX_SAFE_INTEGER
+    const rightFinishedAtTick = right.metadata.finishedAtTick ?? Number.MAX_SAFE_INTEGER
+    if (leftFinishedAtTick !== rightFinishedAtTick) {
+      return leftFinishedAtTick - rightFinishedAtTick
+    }
+
+    return left.laneNumber - right.laneNumber
+  })
 
   const podiumLaneMap = new Map<number, number>()
-  for (let index = 0; index < Math.min(3, lastRoundSummary.horseResults.length); index += 1) {
-    const horseResult = lastRoundSummary.horseResults[index]
-    podiumLaneMap.set(horseResult.laneNumber, index + 1)
+  for (let index = 0; index < Math.min(3, orderedByFinish.length); index += 1) {
+    const horse = orderedByFinish[index]
+    podiumLaneMap.set(horse.laneNumber, index + 1)
   }
 
   return podiumLaneMap
@@ -244,11 +261,13 @@ const drawLaneNumber = ({
   laneNumber,
   laneCenterY,
   isSelectedHorse,
+  isBetHorse,
 }: {
   context: CanvasRenderingContext2D
   laneNumber: number
   laneCenterY: number
   isSelectedHorse: boolean
+  isBetHorse: boolean
 }): void => {
   if (isSelectedHorse) {
     context.fillStyle = colorTokens.track.laneTextSelected
@@ -257,7 +276,8 @@ const drawLaneNumber = ({
   }
 
   context.font = '12px Trebuchet MS'
-  context.fillText(String(laneNumber), gameConfig.track.lanePaddingX - 28, laneCenterY + 4)
+  const laneLabel = isBetHorse ? `>> ${laneNumber}` : String(laneNumber)
+  context.fillText(laneLabel, gameConfig.track.lanePaddingX - 46, laneCenterY + 4)
 }
 
 /**
@@ -283,6 +303,7 @@ export const createTrackCanvasRenderer = ({
     elapsedMs,
     snapshotByHorseId,
     raceFinishDistance,
+    highlightedHorseIds,
   }: {
     context: CanvasRenderingContext2D
     session: RaceSession
@@ -290,6 +311,7 @@ export const createTrackCanvasRenderer = ({
     elapsedMs: number
     snapshotByHorseId: Map<string, number>
     raceFinishDistance: number
+    highlightedHorseIds: Set<string>
   }) => void
 } => {
   const renderEmptyTrack = (canvas: HTMLCanvasElement | null): void => {
@@ -312,6 +334,7 @@ export const createTrackCanvasRenderer = ({
     elapsedMs,
     snapshotByHorseId,
     raceFinishDistance,
+    highlightedHorseIds,
   }: {
     context: CanvasRenderingContext2D
     session: RaceSession
@@ -319,6 +342,7 @@ export const createTrackCanvasRenderer = ({
     elapsedMs: number
     snapshotByHorseId: Map<string, number>
     raceFinishDistance: number
+    highlightedHorseIds: Set<string>
   }): void => {
     const finishX = getFinishLineX()
     const horseByLaneNumber = new Map(session.horses.map((horse) => [horse.laneNumber, horse]))
@@ -388,6 +412,7 @@ export const createTrackCanvasRenderer = ({
         laneNumber: laneHorse.laneNumber,
         laneCenterY,
         isSelectedHorse: laneHorse.id === session.selectedHorseId,
+        isBetHorse: highlightedHorseIds.has(laneHorse.id),
       })
 
       const finalPodiumRank = finalPodiumLaneMap.get(lane.laneNumber)
