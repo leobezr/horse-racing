@@ -2,16 +2,16 @@ import { ref } from 'vue'
 
 export const useRaceSetupModal = () => {
   const isRaceSetupModalOpen = ref<boolean>(false)
-  const pendingRaceHorseId = ref<string | null>(null)
+  const pendingRaceHorseIds = ref<string[]>([])
 
-  const openRaceSetupModal = (selectedHorseId: string | null): void => {
-    pendingRaceHorseId.value = selectedHorseId
+  const openRaceSetupModal = (selectedHorseIds: string[]): void => {
+    pendingRaceHorseIds.value = [...selectedHorseIds]
     isRaceSetupModalOpen.value = true
   }
 
   const closeRaceSetupModal = (): void => {
     isRaceSetupModalOpen.value = false
-    pendingRaceHorseId.value = null
+    pendingRaceHorseIds.value = []
   }
 
   const onRaceSetupModalModelUpdate = (isOpen: boolean): void => {
@@ -20,31 +20,37 @@ export const useRaceSetupModal = () => {
     }
   }
 
-  const selectPendingRaceHorse = (horseId: string): void => {
-    pendingRaceHorseId.value = horseId
-  }
-
-  const startRaceWithPendingHorse = async ({
-    onStart,
-  }: {
-    onStart: (horseId: string) => Promise<void>
-  }): Promise<void> => {
-    const horseId = pendingRaceHorseId.value
-    if (!horseId) {
+  const togglePendingRaceHorse = (horseId: string): void => {
+    const horseIndex = pendingRaceHorseIds.value.findIndex((id) => id === horseId)
+    if (horseIndex >= 0) {
+      pendingRaceHorseIds.value = pendingRaceHorseIds.value.filter((id) => id !== horseId)
       return
     }
 
+    pendingRaceHorseIds.value = [...pendingRaceHorseIds.value, horseId]
+  }
+
+  const startRaceWithPendingHorses = async ({
+    onStart,
+  }: {
+    onStart: (horseIds: string[]) => Promise<void>
+  }): Promise<void> => {
+    if (pendingRaceHorseIds.value.length === 0) {
+      return
+    }
+
+    const selectedHorseIds = [...pendingRaceHorseIds.value]
     closeRaceSetupModal()
-    await onStart(horseId)
+    await onStart(selectedHorseIds)
   }
 
   return {
     isRaceSetupModalOpen,
-    pendingRaceHorseId,
+    pendingRaceHorseIds,
     openRaceSetupModal,
     closeRaceSetupModal,
     onRaceSetupModalModelUpdate,
-    selectPendingRaceHorse,
-    startRaceWithPendingHorse,
+    togglePendingRaceHorse,
+    startRaceWithPendingHorses,
   }
 }
