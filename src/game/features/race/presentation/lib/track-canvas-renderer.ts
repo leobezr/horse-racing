@@ -3,6 +3,7 @@ import { colorTokens } from '../../../../../shared/theme/color-tokens'
 import { horseAssetConfig } from '../../infrastructure/horse-assets'
 import type { FrameVisibleBounds } from '../../types/frame-visible-bounds'
 import type { HorseOption, RaceSession } from '../../types/horse-race'
+import { getRoundFinishDistanceForTick } from './round-distance'
 
 const podiumLaneColors = [
   colorTokens.track.podiumGold,
@@ -169,18 +170,15 @@ const getHorseFrameToDraw = ({
   currentDistance,
   raceFinishDistance,
   elapsedMs,
-  raceSnapshotsCount,
 }: {
   horse: HorseOption
   currentDistance: number
   raceFinishDistance: number
   elapsedMs: number
-  raceSnapshotsCount: number
 }): number => {
   const horseFinished = currentDistance >= raceFinishDistance
-  const isLastSnapshot = raceSnapshotsCount <= 1
 
-  if (horseFinished || isLastSnapshot) {
+  if (horseFinished) {
     return horseAssetConfig.idleFrameIndex
   }
 
@@ -325,6 +323,12 @@ export const createTrackCanvasRenderer = ({
     const finishX = getFinishLineX()
     const horseByLaneNumber = new Map(session.horses.map((horse) => [horse.laneNumber, horse]))
     const isRaceFinished = tickIndex >= Math.max(0, session.race.raceSnapshots.length - 1)
+    const activeRoundFinishDistance = getRoundFinishDistanceForTick({
+      tickIndex,
+      roundSummaries: session.race.roundSummaries,
+      configuredRoundTrackDistances: gameConfig.rounds.trackDistances,
+      fallbackFinishDistance: raceFinishDistance,
+    })
     const livePodiumLaneMap = getPodiumLaneMap({
       session,
       snapshotByHorseId,
@@ -351,14 +355,13 @@ export const createTrackCanvasRenderer = ({
       const distance = snapshotByHorseId.get(laneHorse.id) ?? 0
       const clampedCanvasDistance = toCanvasDistance({
         raceDistance: distance,
-        raceFinishDistance,
+        raceFinishDistance: activeRoundFinishDistance,
       })
       const frameToDraw = getHorseFrameToDraw({
         horse: laneHorse,
         currentDistance: distance,
-        raceFinishDistance,
+        raceFinishDistance: activeRoundFinishDistance,
         elapsedMs,
-        raceSnapshotsCount: session.race.raceSnapshots.length,
       })
 
       const sheet = session.renderSheets[laneHorse.id]

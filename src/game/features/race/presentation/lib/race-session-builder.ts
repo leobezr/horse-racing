@@ -1,4 +1,3 @@
-import type { RaceCanvasPorts } from "../../types/race-canvas-ports";
 import { createRaceSession } from "../../application/race-session-service";
 
 import type {
@@ -39,10 +38,7 @@ const getSelectedHorseForRace = ({
  * This helper validates input constraints, resolves replay/seed selection,
  * generates the race session, and persists race plus bet outcomes.
  */
-export const createRaceSessionBuilder = ({
-  raceHistoryStore,
-  profileBetsStore,
-}: RaceCanvasPorts): {
+export const createRaceSessionBuilder = (): {
   buildRaceSession: (
     input: BuildRaceSessionInput,
   ) => Promise<BuildRaceSessionOutput | null>;
@@ -73,26 +69,6 @@ export const createRaceSessionBuilder = ({
     const nextSession = await createRaceSession({
       seedInput: currentSeed,
       selectedHorseId: selectedHorseForRace,
-    });
-
-    const selectedHorse = nextSession.horses.find(
-      (horse) => horse.id === nextSession.selectedHorseId,
-    );
-
-    const raceEntry = raceHistoryStore.addRaceEntry({
-      seedText: nextSession.seedText,
-      selectedHorseId: nextSession.selectedHorseId,
-      winnerHorseId: nextSession.race.winnerId,
-    });
-
-    profileBetsStore.addResolvedBet({
-      raceId: raceEntry.id,
-      horseId: nextSession.selectedHorseId,
-      amount: Math.floor(input.stakeAmount),
-      oddsNumerator: selectedHorse?.odds.numerator ?? 1,
-      oddsDenominator: selectedHorse?.odds.denominator ?? 1,
-      oddsLabel: selectedHorse?.odds.label ?? "1/1",
-      winnerHorseId: nextSession.race.winnerId,
     });
 
     return {
