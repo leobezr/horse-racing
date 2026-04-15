@@ -84,6 +84,7 @@ export type RaceStateEntry = {
 
 export type RaceResult = {
   winnerId: string | null
+  finishDistance: number
   raceSnapshots: RaceSnapshot[]
   roundSummaries: RaceRoundSummary[]
   metadataByHorseId: Record<string, Omit<HorseRuntimeMetadata, 'selectedByUser'>>
