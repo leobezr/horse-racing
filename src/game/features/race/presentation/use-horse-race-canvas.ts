@@ -19,6 +19,7 @@ import {
 } from "./lib/frame-visible-bounds-cache";
 
 import type {
+  ProfileBetsStorePort,
   RaceReplayStorePort,
 } from "../types/race-canvas-ports";
 
@@ -123,19 +124,7 @@ export const useHorseRaceCanvas = ({
   raceHistoryStore,
   raceReplayStore,
 }: {
-  profileBetsStore: {
-    availableCredit: number;
-    canPlaceBetAmount: (amount: number) => boolean;
-    addResolvedBet: (payload: {
-      raceId: string;
-      horseId: string;
-      amount: number;
-      oddsNumerator: number;
-      oddsDenominator: number;
-      oddsLabel: string;
-      winnerHorseId: string | null;
-    }) => boolean;
-  };
+  profileBetsStore: ProfileBetsStorePort;
   raceHistoryStore: {
     addRaceEntry: (payload: {
       seedText: string;
@@ -168,6 +157,7 @@ export const useHorseRaceCanvas = ({
   const resolvedRoundCount = ref<number>(0);
   const roundBetHorseIds = ref<string[]>([]);
   const roundBetStakeAmount = ref<number>(0);
+  const reservedRoundStakeAmount = ref<number>(0);
   const liveRaceRound = ref<LiveRaceRound | null>(null);
   const liveHorseProgress = ref<LiveHorseProgress[]>([]);
   const { getFrameVisibleBounds } = createFrameVisibleBoundsReader();
@@ -338,9 +328,7 @@ export const useHorseRaceCanvas = ({
       horseCount: selectedBetHorseIds.length,
       stakePerHorse: selectedBetStakeAmount,
     });
-    if (!profileBetsStore.canPlaceBetAmount(totalStake)) {
-      return;
-    }
+    profileBetsStore.releaseReservedBetAmount(totalStake);
 
     for (const selectedBetHorseId of selectedBetHorseIds) {
       const selectedHorse = session.horses.find(
@@ -392,6 +380,29 @@ export const useHorseRaceCanvas = ({
     stakeAmount.value = resolvedStakeAmount;
     roundBetHorseIds.value = [...carryHorseIds];
     roundBetStakeAmount.value = resolvedStakeAmount;
+  };
+
+  const reserveCurrentRoundStake = (): boolean => {
+    const selectedBetHorseIds = resolveAutoBetHorseIds({
+      previousHorseIds: roundBetHorseIds.value,
+      fallbackHorseId: selectedHorseId.value,
+    });
+    const totalStake = getRoundBetTotalStake({
+      horseCount: selectedBetHorseIds.length,
+      stakePerHorse: roundBetStakeAmount.value,
+    });
+
+    if (totalStake < 1) {
+      return false;
+    }
+
+    const reserved = profileBetsStore.reserveBetAmount(totalStake);
+    if (!reserved) {
+      return false;
+    }
+
+    reservedRoundStakeAmount.value = totalStake;
+    return true;
   };
 
   const runBetweenRoundsBetWindow = async (): Promise<void> => {
@@ -460,6 +471,7 @@ export const useHorseRaceCanvas = ({
       session,
       roundNumber: nextRoundNumber,
     });
+    reservedRoundStakeAmount.value = 0;
     resolvedRoundCount.value = nextRoundNumber;
 
     const hasNextRound = nextRoundNumber < gameConfig.rounds.count;
@@ -471,6 +483,11 @@ export const useHorseRaceCanvas = ({
     if (hasNextRound) {
       const pauseStartMs = window.performance.now();
       await runBetweenRoundsBetWindow();
+      const hasReservedNextRoundStake = reserveCurrentRoundStake();
+      if (!hasReservedNextRoundStake) {
+        applyAutoBetFallback();
+        reserveCurrentRoundStake();
+      }
       const pauseDurationMs = window.performance.now() - pauseStartMs;
       startEpochMs.value += pauseDurationMs;
     }
@@ -545,6 +562,7 @@ export const useHorseRaceCanvas = ({
       elapsedMs,
       snapshotByHorseId,
       raceFinishDistance,
+      highlightedHorseIds: new Set(roundBetHorseIds.value),
     });
 
     const hasNextFrame = shouldAnimateNextFrame({
@@ -552,6 +570,18 @@ export const useHorseRaceCanvas = ({
       snapshotCount: session.race.raceSnapshots.length,
     });
     if (!hasNextFrame) {
+      const hasUnsettledRound =
+        resolvedRoundCount.value < session.race.roundSummaries.length;
+      if (hasUnsettledRound) {
+        const roundNumber = resolvedRoundCount.value + 1;
+        settleRoundBet({
+          session,
+          roundNumber,
+        });
+        resolvedRoundCount.value = roundNumber;
+        reservedRoundStakeAmount.value = 0;
+      }
+
       isRaceConcluded.value = true;
       return;
     }
@@ -590,6 +620,10 @@ export const useHorseRaceCanvas = ({
     stopAnimation();
     stopPreRaceCountdown();
     stopBetweenRoundsCountdown();
+    if (reservedRoundStakeAmount.value > 0) {
+      profileBetsStore.releaseReservedBetAmount(reservedRoundStakeAmount.value);
+      reservedRoundStakeAmount.value = 0;
+    }
     startEpochMs.value = 0;
     isRaceConcluded.value = false;
     isBetweenRoundsTransitioning.value = false;
@@ -645,6 +679,7 @@ export const useHorseRaceCanvas = ({
       raceSession.value = buildResult.raceSession;
       selectedHorseId.value = buildResult.selectedHorseId;
       previewLoaded.value = true;
+      reserveCurrentRoundStake();
       await beginRaceAnimation();
     } finally {
       isLoading.value = false;
@@ -689,7 +724,7 @@ export const useHorseRaceCanvas = ({
       roundBetHorseIds.value = [...horseIds];
       selectedHorseId.value = horseIds[0] ?? null;
     },
-    availableCredit: profileBetsStore.availableCredit,
+    availableCredit: computed(() => profileBetsStore.availableCredit),
     stakeAmount,
     chipValues,
     selectChipAmount: (amount: number): void => {
