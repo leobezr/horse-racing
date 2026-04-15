@@ -222,6 +222,13 @@ const calculateTickDistance = ({
 
   const remainingTicks = Math.max(1, ticksPerRound - roundTick)
   const remainingDistance = Math.max(0, roundFinishDistance - horseState.distance)
+  if (remainingTicks === 1) {
+    return {
+      distance: remainingDistance,
+      sprintApplied: false,
+    }
+  }
+
   const durationPace = remainingDistance / remainingTicks
   const normalizedBaseSpeed = getNormalizedBaseSpeed(horse.stats.baseSpeed)
 
@@ -416,7 +423,6 @@ export const runDeterministicRace = ({ horses, rng }: { horses: HorseOption[]; r
   const ticksPerRound = Math.floor((gameConfig.rounds.secondsPerRound * 1000) / gameConfig.animation.tickMs)
   let finishDistance = getRoundTrackDistance(gameConfig.rounds.count)
 
-  let roundStartTick = 0
   let lastRoundRacingState = createInitialRaceState(horses)
   let lastRoundWinnerId: string | null = null
 
@@ -467,10 +473,6 @@ export const runDeterministicRace = ({ horses, rng }: { horses: HorseOption[]; r
 
       raceSnapshots.push(createRaceSnapshot(racingState))
 
-      const allFinished = racingState.every((horseState) => horseState.finishedAtTick !== null)
-      if (allFinished) {
-        break
-      }
     }
 
     const roundEndTick = raceSnapshots.length - 1
@@ -486,7 +488,6 @@ export const runDeterministicRace = ({ horses, rng }: { horses: HorseOption[]; r
       }),
     )
 
-    roundStartTick = roundEndTick + 1
     lastRoundRacingState = racingState
     lastRoundWinnerId = pickWinnerId({ racingState, horses })
   }
