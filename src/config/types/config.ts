@@ -51,6 +51,23 @@ export type GameConfig = {
     burstDurationTicksMax: number
     burstMultiplierMin: number
     burstMultiplierMax: number
+    sprintInjurySpeedPenaltyMultiplier: number
+    sprintInjuryStaminaCap: number
+    sprintInjuryPenaltyTicks: number
+    cruisingSpeedRatio: number
+    limpSpeedRatio: number
+    kickBurnMultiplier: number
+    finishPhaseStart: number
+    handicapWeightPerWinKg: number
+    dailyFormMin: number
+    dailyFormMax: number
+    headwindImpactMax: number
+    tailwindBoostMax: number
+    surfaceGrip: {
+      firm: number
+      soft: number
+      heavy: number
+    }
     maxTicks: number
   }
 }
