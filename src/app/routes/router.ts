@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import type { RouteRecordRaw } from './types/router'
+import type { RouteRecordRaw } from '../core/types/router'
 import ProfileRoute from '../features/profile/routes/ProfileRoute.vue'
 import RaceHistoryRoute from '../features/race-history/routes/RaceHistoryRoute.vue'
 import RaceRoute from '../features/race/routes/RaceRoute.vue'
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/',
+    path: '/:seed?',
     name: 'race',
     component: RaceRoute,
   },
