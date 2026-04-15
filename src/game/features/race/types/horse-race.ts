@@ -14,6 +14,15 @@ export type HorseStats = {
   accelerationBias: number
   stamina: number
   sprintControl: number
+  gateJump: number
+  topSpeed: number
+  staminaReservoir: number
+  efficiency: number
+  finishDrive: number
+  aerodynamics: number
+  weightKg: number
+  style: 'rabbit' | 'closer' | 'grinder'
+  dailyForm: number
 }
 
 export type HorseRuntimeMetadata = {
@@ -37,6 +46,7 @@ export type RoundHorseResult = {
 
 export type RaceRoundSummary = {
   roundNumber: number
+  seedText: string
   startTick: number
   endTick: number
   horseResults: RoundHorseResult[]
@@ -83,6 +93,12 @@ export type RaceStateEntry = {
   staminaReserve: number
   burstTicksRemaining: number
   activeBurstMultiplier: number
+  injurySpeedPenaltyMultiplier: number
+  hasSprintInjury: boolean
+  injuryPenaltyTicksRemaining: number
+  currentSpeed: number
+  roundWins: number
+  handicapWeightKg: number
 }
 
 export type RaceResult = {
@@ -104,6 +120,7 @@ export type RoundExecution = {
   finishDistance: number
   racingState: RaceStateEntry[]
   summary: RaceRoundSummary
+  winnerId: string | null
 }
 
 export type LiveRaceRound = {
