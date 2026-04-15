@@ -107,3 +107,35 @@ If rules conflict, resolve in this order:
 - ESLint configuration must be present and maintained (`eslint.config.js`).
 - Every completion pass must run linting before finalizing work.
 - Default finish command: `yarn verify` (runs lint + typecheck + guardrails).
+
+## 16) Testing and coverage gate policy
+
+- Testing strategy is TDD-first and mandatory.
+- Follow RED -> GREEN -> REFACTOR for all new behavior and bug fixes:
+  - RED: write or update a failing test first.
+  - GREEN: implement the smallest production change required to pass.
+  - REFACTOR: improve structure without behavior changes while tests remain green.
+- Do not implement production changes before a failing test exists.
+- Do not skip the RED phase.
+- Run targeted tests during RED/GREEN loops, then run the full suite before finalization.
+- Coverage is a hard gate at 100% for lines, statements, functions, and branches.
+- Finalization is blocked if tests were not run, any test fails, or coverage is below 100%.
+- Default coverage validation command: `yarn test:run --coverage`.
+
+## 17) Context switcher policy
+
+- Two execution contexts are mandatory: `orchestrator` and `developer`.
+- `orchestrator` context is triggered by architecture decisions (layering, boundaries, module placement, cross-feature integration, or dependency direction changes).
+- In `orchestrator` context, always enforce Clean Architecture practices and explicit layer boundaries.
+- In `orchestrator` context, event-driven callbacks are forbidden outside Vue component boundaries.
+- Callback-based event wiring is allowed only inside Vue components under `src/app` presentation layer.
+- Domain, application, and infrastructure layers must prefer explicit use-case/service APIs over event-callback orchestration.
+
+## 18) Developer context implementation policy
+
+- `developer` context is implementation-focused and TDD-first by default.
+- Apply RED -> GREEN rigorously before refactoring.
+- Maintain 100% coverage for lines, statements, functions, and branches.
+- Functions must be easy to read, cohesive, and separated by concern.
+- Functions should be limited to 30 lines (excluding comments and blank lines).
+- Use JSDoc on non-trivial exported functions/methods to explain intent and rationale (`why`), not mechanics (`what`).
