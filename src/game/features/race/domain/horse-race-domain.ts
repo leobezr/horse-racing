@@ -204,45 +204,27 @@ const calculateTickDistance = ({
   rng,
   roundMultiplier,
   roundSprintCount,
-  roundTick,
-  ticksPerRound,
-  roundFinishDistance,
 }: {
   horse: HorseOption
   horseState: RaceStateEntry
   rng: DeterministicRng
   roundMultiplier: number
   roundSprintCount: number
-  roundTick: number
-  ticksPerRound: number
-  roundFinishDistance: number
 }): { distance: number; sprintApplied: boolean } => {
   const accelerationRoll = rng.randomFloat(0, 1)
   const sprintRoll = rng.randomFloat(0, 1)
 
-  const remainingTicks = Math.max(1, ticksPerRound - roundTick)
-  const remainingDistance = Math.max(0, roundFinishDistance - horseState.distance)
-  if (remainingTicks === 1) {
-    return {
-      distance: remainingDistance,
-      sprintApplied: false,
-    }
-  }
-
-  const durationPace = remainingDistance / remainingTicks
   const normalizedBaseSpeed = getNormalizedBaseSpeed(horse.stats.baseSpeed)
 
-  const baseSpeedFactor = 0.9 + normalizedBaseSpeed * 0.2
-  const accelerationFactor = 0.9 + horse.stats.accelerationBias * accelerationRoll * 0.2
-  const staminaFactor = 0.9 + horse.stats.stamina * 0.15
-
-  let tickDistance = durationPace * baseSpeedFactor * accelerationFactor * staminaFactor * roundMultiplier
+  const baseSpeed = gameConfig.simulation.baseSpeedMin + normalizedBaseSpeed * (gameConfig.simulation.baseSpeedMax - gameConfig.simulation.baseSpeedMin)
+  const accelerationBonus = horse.stats.accelerationBias * accelerationRoll * gameConfig.simulation.accelerationWeight
+  const staminaBonus = horse.stats.stamina * 0.8
+  let tickDistance = (baseSpeed + accelerationBonus + staminaBonus) * roundMultiplier
 
   const hasActiveSprint = horseState.sprintTicksRemaining > 0
   if (hasActiveSprint) {
     horseState.sprintTicksRemaining -= 1
-    const sprintPercentBoost = rng.randomFloat(gameConfig.simulation.sprintBonusMin, gameConfig.simulation.sprintBonusMax) / 100
-    tickDistance *= 1 + sprintPercentBoost
+    tickDistance += rng.randomFloat(gameConfig.simulation.sprintBonusMin, gameConfig.simulation.sprintBonusMax)
     return {
       distance: tickDistance,
       sprintApplied: false,
@@ -254,8 +236,7 @@ const calculateTickDistance = ({
 
   if (sprintApplied) {
     horseState.sprintTicksRemaining = gameConfig.simulation.sprintDurationTicks - 1
-    const sprintPercentBoost = rng.randomFloat(gameConfig.simulation.sprintBonusMin, gameConfig.simulation.sprintBonusMax) / 100
-    tickDistance *= 1 + sprintPercentBoost
+    tickDistance += rng.randomFloat(gameConfig.simulation.sprintBonusMin, gameConfig.simulation.sprintBonusMax)
   }
 
   return {
@@ -420,7 +401,6 @@ export const runDeterministicRace = ({ horses, rng }: { horses: HorseOption[]; r
   const roundSummaries: RaceResult['roundSummaries'] = []
   const horseById = new Map(horses.map((horse) => [horse.id, horse]))
 
-  const ticksPerRound = Math.floor((gameConfig.rounds.secondsPerRound * 1000) / gameConfig.animation.tickMs)
   let finishDistance = getRoundTrackDistance(gameConfig.rounds.count)
 
   let lastRoundRacingState = createInitialRaceState(horses)
@@ -434,7 +414,7 @@ export const runDeterministicRace = ({ horses, rng }: { horses: HorseOption[]; r
     const sprintCountByHorseId = new Map(horses.map((horse) => [horse.id, 0]))
     const currentRoundStartTick = raceSnapshots.length
 
-    for (let roundTick = 0; roundTick < ticksPerRound; roundTick += 1) {
+    for (let roundTick = 0; roundTick < gameConfig.simulation.maxTicks; roundTick += 1) {
       for (const horseState of racingState) {
         if (horseState.finishedAtTick !== null) {
           continue
@@ -452,9 +432,6 @@ export const runDeterministicRace = ({ horses, rng }: { horses: HorseOption[]; r
           rng,
           roundMultiplier,
           roundSprintCount,
-          roundTick,
-          ticksPerRound,
-          roundFinishDistance: finishDistance,
         })
 
         if (tickResult.sprintApplied) {
@@ -473,6 +450,23 @@ export const runDeterministicRace = ({ horses, rng }: { horses: HorseOption[]; r
 
       raceSnapshots.push(createRaceSnapshot(racingState))
 
+      const allFinished = racingState.every((horseState) => horseState.finishedAtTick !== null)
+      if (allFinished) {
+        break
+      }
+
+    }
+
+    const anyUnfinished = racingState.some((horseState) => horseState.finishedAtTick === null)
+    if (anyUnfinished) {
+      for (const horseState of racingState) {
+        if (horseState.finishedAtTick !== null) {
+          continue
+        }
+        horseState.distance = finishDistance
+        horseState.finishedAtTick = gameConfig.simulation.maxTicks
+      }
+      raceSnapshots.push(createRaceSnapshot(racingState))
     }
 
     const roundEndTick = raceSnapshots.length - 1

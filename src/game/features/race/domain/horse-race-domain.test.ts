@@ -32,15 +32,16 @@ describe('runDeterministicRace', () => {
     }
   })
 
-  it('keeps race running for full configured round duration', () => {
+  it('does not force rounds to end at configured seconds', () => {
     const rng = createMockDeterministicRng()
     const horses = createHorseOptions(rng).slice(0, gameConfig.raceHorseCount)
 
     const raceResult = runDeterministicRace({ horses, rng })
-    const ticksPerRound = Math.floor((gameConfig.rounds.secondsPerRound * 1000) / gameConfig.animation.tickMs)
-    const expectedSnapshotCount = gameConfig.rounds.count * ticksPerRound
+    const configuredTotalTicks =
+      gameConfig.rounds.count *
+      Math.floor((gameConfig.rounds.secondsPerRound * 1000) / gameConfig.animation.tickMs)
 
-    expect(raceResult.raceSnapshots).toHaveLength(expectedSnapshotCount)
+    expect(raceResult.raceSnapshots.length).toBeGreaterThan(configuredTotalTicks)
   })
 
   it('has each horse at finish distance by final snapshot', () => {
@@ -53,6 +54,22 @@ describe('runDeterministicRace', () => {
     expect(finalSnapshot).toHaveLength(gameConfig.raceHorseCount)
     for (const horseSnapshot of finalSnapshot) {
       expect(horseSnapshot.distance).toBe(raceResult.finishDistance)
+    }
+  })
+
+  it('has each horse reach configured distance by each round end tick', () => {
+    const rng = createMockDeterministicRng()
+    const horses = createHorseOptions(rng).slice(0, gameConfig.raceHorseCount)
+
+    const raceResult = runDeterministicRace({ horses, rng })
+
+    for (const roundSummary of raceResult.roundSummaries) {
+      const roundSnapshot = raceResult.raceSnapshots[roundSummary.endTick] ?? []
+      const expectedRoundDistance = gameConfig.rounds.trackDistances[roundSummary.roundNumber - 1]
+
+      for (const horseSnapshot of roundSnapshot) {
+        expect(horseSnapshot.distance).toBe(expectedRoundDistance)
+      }
     }
   })
 
