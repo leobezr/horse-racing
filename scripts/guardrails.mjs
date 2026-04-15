@@ -6,6 +6,9 @@ const srcDir = path.join(rootDir, 'src')
 const configDir = path.join(srcDir, 'config')
 const typesDir = path.join(srcDir, 'types')
 const allowedPrefixesPath = path.join(rootDir, '.opencode', 'allowed-data-test-prefixes.json')
+const contextStatePath = path.join(rootDir, '.opencode', 'copilot-context.json')
+const contextConfigPath = path.join(rootDir, '.opencode', 'copilot-contexts.json')
+const srcAppDir = path.join(srcDir, 'app')
 
 const errors = []
 
@@ -94,6 +97,119 @@ function checkBEMandDataTest(filePath, content, allowedPrefixes) {
   }
 }
 
+function countLogicalLines(content) {
+  const lines = content.split('\n')
+  const logical = lines.filter((line) => {
+    const trimmed = line.trim()
+    return trimmed.length > 0 && !trimmed.startsWith('//')
+  })
+  return logical.length
+}
+
+function checkFunctionLength(filePath, content) {
+  if (!/\.(ts|vue)$/.test(filePath)) {
+    return
+  }
+
+  const functionRegex = /(const\s+[A-Za-z0-9_$]+\s*=\s*\([^)]*\)\s*=>\s*\{|(?:async\s+)?function\s+[A-Za-z0-9_$]+\s*\([^)]*\)\s*\{|[A-Za-z0-9_$]+\s*\([^)]*\)\s*\{)/g
+  const lines = content.split('\n')
+  let match
+
+  while ((match = functionRegex.exec(content))) {
+    const startIndex = match.index
+    let braceDepth = 0
+    let endIndex = -1
+    for (let i = startIndex; i < content.length; i += 1) {
+      const char = content[i]
+      if (char === '{') {
+        braceDepth += 1
+      }
+      if (char === '}') {
+        braceDepth -= 1
+        if (braceDepth === 0) {
+          endIndex = i
+          break
+        }
+      }
+    }
+
+    if (endIndex < 0) {
+      continue
+    }
+
+    const beforeStart = content.slice(0, startIndex)
+    const startLine = beforeStart.split('\n').length
+    const body = content.slice(startIndex, endIndex + 1)
+    const logicalLength = countLogicalLines(body)
+    if (logicalLength > 30) {
+      errors.push(`${filePath}:${startLine}: function length ${logicalLength} exceeds 30 logical lines`)
+    }
+  }
+
+  if (lines.length === 0) {
+    return
+  }
+}
+
+function checkExportedJSDoc(filePath, content) {
+  if (!/\.ts$/.test(filePath)) {
+    return
+  }
+
+  const exportedFnRegex = /(^|\n)\s*export\s+(?:const\s+[A-Za-z0-9_$]+\s*=\s*\([^)]*\)\s*=>\s*\{|(?:async\s+)?function\s+[A-Za-z0-9_$]+\s*\([^)]*\)\s*\{)/g
+  let match
+
+  while ((match = exportedFnRegex.exec(content))) {
+    const fullMatchIndex = match.index + (match[1] ? match[1].length : 0)
+    const header = content.slice(0, fullMatchIndex).trimEnd()
+    const jsDocMatch = /\/\*\*[\s\S]*\*\/$/.exec(header)
+    const hasJsDoc = Boolean(jsDocMatch)
+    if (!hasJsDoc) {
+      const line = content.slice(0, fullMatchIndex).split('\n').length
+      errors.push(`${filePath}:${line}: exported function is missing JSDoc`) 
+      continue
+    }
+
+    const block = jsDocMatch ? jsDocMatch[0] : ''
+    if (!/\b(why|because|reason|rationale|intent)\b/i.test(block)) {
+      const line = content.slice(0, fullMatchIndex).split('\n').length
+      errors.push(`${filePath}:${line}: JSDoc should explain why, not only what`) 
+    }
+  }
+}
+
+function checkEventCallbacksOutsideVue(filePath, content) {
+  const normalizedAppPath = `${srcAppDir}${path.sep}`
+  const isVueComponent = filePath.endsWith('.vue')
+  const isUnderApp = filePath.startsWith(normalizedAppPath)
+  if (isVueComponent && isUnderApp) {
+    return
+  }
+
+  const callbackEventRegex = /(addEventListener\s*\(|\$on\s*\(|\.on\s*\(|\.once\s*\(|EventEmitter\b|mitt\s*\()/
+  if (callbackEventRegex.test(content)) {
+    errors.push(`${filePath}: event-driven callback usage is forbidden outside Vue components in src/app`)
+  }
+}
+
+async function loadContextState() {
+  const raw = await readFile(contextStatePath, 'utf8')
+  const parsed = JSON.parse(raw)
+  if (!parsed || (parsed.current !== 'developer' && parsed.current !== 'orchestrator')) {
+    throw new Error('copilot-context.json must define current as developer or orchestrator')
+  }
+  return parsed
+}
+
+async function loadContextConfig() {
+  const raw = await readFile(contextConfigPath, 'utf8')
+  const parsed = JSON.parse(raw)
+  if (!parsed?.developer || !parsed?.orchestrator) {
+    throw new Error('copilot-contexts.json must define developer and orchestrator')
+  }
+  return parsed
+}
+
 async function loadAllowedPrefixes() {
   const raw = await readFile(allowedPrefixesPath, 'utf8')
   const parsed = JSON.parse(raw)
@@ -117,7 +233,17 @@ async function main() {
     errors.push('missing required types directory: src/types')
   }
 
+  if (!(await exists(contextStatePath))) {
+    errors.push('missing required context state file: .opencode/copilot-context.json')
+  }
+
+  if (!(await exists(contextConfigPath))) {
+    errors.push('missing required context configuration file: .opencode/copilot-contexts.json')
+  }
+
   const allowedPrefixes = await loadAllowedPrefixes()
+  const contextState = await loadContextState()
+  await loadContextConfig()
   if (hasSrc) {
     const allFiles = await walk(srcDir)
     const sourceFiles = allFiles.filter(isRelevantSource)
@@ -126,6 +252,13 @@ async function main() {
       checkHardcodedConfig(filePath, content)
       checkTypesSeparated(filePath, content)
       checkBEMandDataTest(filePath, content, allowedPrefixes)
+      if (contextState.current === 'developer') {
+        checkFunctionLength(filePath, content)
+        checkExportedJSDoc(filePath, content)
+      }
+      if (contextState.current === 'orchestrator') {
+        checkEventCallbacksOutsideVue(filePath, content)
+      }
     }
   }
 
