@@ -1,4 +1,9 @@
 import type { HorseColorMap, HorseFramePair } from '../types/horse-race'
+import { appConfig } from '../../../../config/app.config'
+
+const createAssetPath = (fileName: string): string => {
+  return `${appConfig.assetBasePath}assets/${fileName}`
+}
 
 export const horseMaskColorTokens: HorseColorMap = {
   primary: '#ff0000',
@@ -14,15 +19,15 @@ export const horseAssetConfig = {
 } as const
 
 export const horseFramePairs: HorseFramePair[] = [
-  { spritePath: '/assets/01.png', maskPath: '/assets/02.png' },
-  { spritePath: '/assets/03.png', maskPath: '/assets/04.png' },
-  { spritePath: '/assets/05.png', maskPath: '/assets/06.png' },
-  { spritePath: '/assets/07.png', maskPath: '/assets/08.png' },
-  { spritePath: '/assets/09.png', maskPath: '/assets/10.png' },
-  { spritePath: '/assets/11.png', maskPath: '/assets/12.png' },
-  { spritePath: '/assets/13.png', maskPath: '/assets/14.png' },
-  { spritePath: '/assets/15.png', maskPath: '/assets/16.png' },
-  { spritePath: '/assets/17.png', maskPath: '/assets/18.png' },
+  { spritePath: createAssetPath('01.png'), maskPath: createAssetPath('02.png') },
+  { spritePath: createAssetPath('03.png'), maskPath: createAssetPath('04.png') },
+  { spritePath: createAssetPath('05.png'), maskPath: createAssetPath('06.png') },
+  { spritePath: createAssetPath('07.png'), maskPath: createAssetPath('08.png') },
+  { spritePath: createAssetPath('09.png'), maskPath: createAssetPath('10.png') },
+  { spritePath: createAssetPath('11.png'), maskPath: createAssetPath('12.png') },
+  { spritePath: createAssetPath('13.png'), maskPath: createAssetPath('14.png') },
+  { spritePath: createAssetPath('15.png'), maskPath: createAssetPath('16.png') },
+  { spritePath: createAssetPath('17.png'), maskPath: createAssetPath('18.png') },
 ]
 
 export const horseWalkFrameIndices = horseFramePairs

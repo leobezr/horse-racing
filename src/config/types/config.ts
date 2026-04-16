@@ -1,5 +1,6 @@
 export type AppConfig = {
   appName: string
+  assetBasePath: string
 }
 
 export type GameConfig = {
