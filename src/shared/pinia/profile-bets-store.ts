@@ -14,50 +14,118 @@ const calculateFixedPayout = (bet: number, num: number, den: number): number => 
   return Number.parseFloat(totalPayout.toFixed(2))
 }
 
-export const useProfileBetsStore = defineStore('profile-bets', () => {
-  const bets = ref<BetEntry[]>(loadBetsFromStorage())
-  const reservedCredit = ref<number>(0)
+const createProfileBetsGetters = ({
+  bets,
+  reservedCredit,
+}: {
+  bets: { value: BetEntry[] }
+  reservedCredit: { value: number }
+}) => {
+  const orderedBets = createOrderedBets(bets)
+  const totalStake = createTotalStake(bets)
+  const totalPayout = createTotalPayout(bets)
+  const availableCredit = createAvailableCredit({
+    totalStake,
+    totalPayout,
+    reservedCredit,
+  })
 
-  const orderedBets = computed(() => {
+  return {
+    orderedBets,
+    totalStake,
+    totalPayout,
+    availableCredit,
+  }
+}
+
+const createOrderedBets = (bets: { value: BetEntry[] }) => {
+  return computed(() => {
     return [...bets.value].sort((left, right) => {
       return right.createdAtIso.localeCompare(left.createdAtIso)
     })
   })
-  const totalStake = computed(() => {
+}
+
+const createTotalStake = (bets: { value: BetEntry[] }) => {
+  return computed(() => {
     return bets.value.reduce((sum, bet) => {
       return sum + bet.amount
     }, 0)
   })
-  const totalPayout = computed(() => {
+}
+
+const createTotalPayout = (bets: { value: BetEntry[] }) => {
+  return computed(() => {
     return bets.value.reduce((sum, bet) => {
       return sum + bet.payout
     }, 0)
   })
-  const availableCredit = computed(() => {
+}
+
+const createAvailableCredit = ({
+  totalStake,
+  totalPayout,
+  reservedCredit,
+}: {
+  totalStake: { value: number }
+  totalPayout: { value: number }
+  reservedCredit: { value: number }
+}) => {
+  return computed(() => {
     return initialCredit + totalPayout.value - totalStake.value - reservedCredit.value
   })
-  const canPlaceBetAmount = (amount: number): boolean => {
-    return amount > 0 && amount <= availableCredit.value
+}
+
+const createResolvedBetEntry = (payload: {
+  raceId: string
+  horseId: string
+  amount: number
+  oddsNumerator: number
+  oddsDenominator: number
+  oddsLabel: string
+  winnerHorseId: string | null
+}): BetEntry => {
+  const won = payload.winnerHorseId !== null && payload.horseId === payload.winnerHorseId
+  let payout = 0
+
+  if (won) {
+    payout = calculateFixedPayout(payload.amount, payload.oddsNumerator, payload.oddsDenominator)
   }
 
-  const reserveBetAmount = (amount: number): boolean => {
-    if (!canPlaceBetAmount(amount)) {
-      return false
-    }
-
-    reservedCredit.value += amount
-    return true
+  return {
+    id: createBetId(),
+    raceId: payload.raceId,
+    horseId: payload.horseId,
+    amount: payload.amount,
+    oddsNumerator: payload.oddsNumerator,
+    oddsDenominator: payload.oddsDenominator,
+    oddsLabel: payload.oddsLabel,
+    winnerHorseId: payload.winnerHorseId,
+    won,
+    payout,
+    createdAtIso: new Date().toISOString(),
   }
+}
 
-  const releaseReservedBetAmount = (amount: number): void => {
-    if (amount <= 0) {
-      return
-    }
+const persistBetEntry = ({
+  bets,
+  nextEntry,
+}: {
+  bets: { value: BetEntry[] }
+  nextEntry: BetEntry
+}): void => {
+  bets.value = [nextEntry, ...bets.value].slice(0, 500)
+  saveBetsToStorage(bets.value)
+}
 
-    reservedCredit.value = Math.max(0, reservedCredit.value - amount)
-  }
-
-  const addResolvedBet = (payload: {
+const createAddResolvedBet = ({
+  bets,
+  canPlaceBetAmount,
+}: {
+  bets: { value: BetEntry[] }
+  canPlaceBetAmount: (amount: number) => boolean
+}) => {
+  return (payload: {
     raceId: string
     horseId: string
     amount: number
@@ -70,29 +138,92 @@ export const useProfileBetsStore = defineStore('profile-bets', () => {
       return false
     }
 
-    const won = payload.winnerHorseId !== null && payload.horseId === payload.winnerHorseId
-    let payout = 0
-    if (won) {
-      payout = calculateFixedPayout(payload.amount, payload.oddsNumerator, payload.oddsDenominator)
-    }
-    const nextEntry: BetEntry = {
-      id: createBetId(),
-      raceId: payload.raceId,
-      horseId: payload.horseId,
-      amount: payload.amount,
-      oddsNumerator: payload.oddsNumerator,
-      oddsDenominator: payload.oddsDenominator,
-      oddsLabel: payload.oddsLabel,
-      winnerHorseId: payload.winnerHorseId,
-      won,
-      payout,
-      createdAtIso: new Date().toISOString(),
-    }
+    const nextEntry = createResolvedBetEntry(payload)
+    persistBetEntry({
+      bets,
+      nextEntry,
+    })
 
-    bets.value = [nextEntry, ...bets.value].slice(0, 500)
-    saveBetsToStorage(bets.value)
     return true
   }
+}
+
+const createReserveBetAmount = ({
+  reservedCredit,
+  canReserveAmount,
+}: {
+  reservedCredit: { value: number }
+  canReserveAmount: (amount: number) => boolean
+}) => {
+  return (amount: number): boolean => {
+    if (!canReserveAmount(amount)) {
+      return false
+    }
+
+    reservedCredit.value += amount
+    return true
+  }
+}
+
+const createReleaseReservedBetAmount = ({
+  reservedCredit,
+}: {
+  reservedCredit: { value: number }
+}) => {
+  return (amount: number): void => {
+    if (amount <= 0) {
+      return
+    }
+
+    reservedCredit.value = Math.max(0, reservedCredit.value - amount)
+  }
+}
+
+const createCanPlaceBetAmount = ({
+  availableCredit,
+}: {
+  availableCredit: { value: number }
+}) => {
+  return (amount: number): boolean => {
+    return amount > 0 && amount <= availableCredit.value
+  }
+}
+
+export const useProfileBetsStore = defineStore('profile-bets', () => {
+  const bets = ref<BetEntry[]>(loadBetsFromStorage())
+  const reservedCredit = ref<number>(0)
+
+  const {
+    orderedBets,
+    totalStake,
+    totalPayout,
+    availableCredit,
+  } = createProfileBetsGetters({
+    bets,
+    reservedCredit,
+  })
+
+  const canPlaceBetAmount = createCanPlaceBetAmount({
+    availableCredit,
+  })
+
+  const canReserveAmount = (amount: number): boolean => {
+    return canPlaceBetAmount(amount)
+  }
+
+  const reserveBetAmount = createReserveBetAmount({
+    reservedCredit,
+    canReserveAmount,
+  })
+
+  const releaseReservedBetAmount = createReleaseReservedBetAmount({
+    reservedCredit,
+  })
+
+  const addResolvedBet = createAddResolvedBet({
+    bets,
+    canPlaceBetAmount,
+  })
 
   return {
     bets,
