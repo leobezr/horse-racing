@@ -16,6 +16,10 @@
 
 Fast, deterministic horse racing simulator with betting rounds, visual race playback, Storybook-driven UI validation, and CI snapshot/e2e pipelines.
 
+## Preview
+
+[Click here to see the preview live](https://leobezr.github.io/horse-racing/)
+
 ## Quick Start
 
 ```bash
