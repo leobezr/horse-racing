@@ -7,14 +7,14 @@ const openStory = async ({
   page: Parameters<typeof test>[0]["page"];
   storyId: string;
 }): Promise<void> => {
-  await page.goto(`/?path=/story/${storyId}`);
-  await page.waitForSelector('[data-test="app-race-canvas-wrap"], [data-test="app-race-controls"]');
+  await page.goto(`/iframe.html?id=${storyId}&viewMode=story`);
+  await page.waitForLoadState("domcontentloaded");
 };
 
 test("race canvas countdown snapshot", async ({ page }) => {
   await openStory({
     page,
-    storyId: "race-organisms-racecanvasorganism--countdownoverlay",
+    storyId: "race-organisms-racecanvasorganism--countdown-overlay",
   });
 
   const canvasWrap = page.locator('[data-test="app-race-canvas-wrap"]');
@@ -25,7 +25,7 @@ test("race canvas countdown snapshot", async ({ page }) => {
 test("race chips interactive snapshot", async ({ page }) => {
   await openStory({
     page,
-    storyId: "race-organisms-racecontrolpanelorganism--chipsinteractive",
+    storyId: "race-organisms-racecontrolpanelorganism--chips-interactive",
   });
 
   const controls = page.locator('[data-test="app-race-controls"]');
