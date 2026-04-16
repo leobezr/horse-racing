@@ -51,6 +51,7 @@ export type GameConfig = {
     burstDurationTicksMax: number
     burstMultiplierMin: number
     burstMultiplierMax: number
+    minRaceSpeed: number
     sprintInjurySpeedPenaltyMultiplier: number
     sprintInjuryStaminaCap: number
     sprintInjuryPenaltyTicks: number
@@ -68,6 +69,7 @@ export type GameConfig = {
       soft: number
       heavy: number
     }
+    raceDebugLogging: boolean
     maxTicks: number
   }
 }
