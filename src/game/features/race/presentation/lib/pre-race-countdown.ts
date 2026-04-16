@@ -110,37 +110,159 @@ const createPlayPreRaceCountdown = ({
   preRaceCountdownLabel: Ref<string>
   waitMs: (ms: number) => Promise<void>
 }): (() => Promise<void>) => {
-  const runCountdownNumbers = createRunCountdownNumbers({
+  const runState = createPlayCountdownState({
     countdownRunId,
     preRaceCountdownValue,
     preRaceCountdownLabel,
     waitMs,
   })
 
+  return createPlayPreRaceCountdownRunner({
+    stopPreRaceCountdown,
+    preRaceCountdownValue,
+    preRaceCountdownLabel,
+    waitMs,
+    runState,
+  })
+}
+
+const createPlayCountdownState = ({
+  countdownRunId,
+  preRaceCountdownValue,
+  preRaceCountdownLabel,
+  waitMs,
+}: {
+  countdownRunId: Ref<number>
+  preRaceCountdownValue: Ref<number | null>
+  preRaceCountdownLabel: Ref<string>
+  waitMs: (ms: number) => Promise<void>
+}) => {
+  const runCountdownNumbers = createRunCountdownNumbers({
+    countdownRunId,
+    preRaceCountdownValue,
+    preRaceCountdownLabel,
+    waitMs,
+  })
+  const runGuards = createCountdownRunGuards(countdownRunId)
+
+  return {
+    runCountdownNumbers,
+    runGuards,
+    countdownRunId,
+  }
+}
+
+const createPlayPreRaceCountdownRunner = ({
+  stopPreRaceCountdown,
+  preRaceCountdownValue,
+  preRaceCountdownLabel,
+  waitMs,
+  runState,
+}: {
+  stopPreRaceCountdown: () => void
+  preRaceCountdownValue: Ref<number | null>
+  preRaceCountdownLabel: Ref<string>
+  waitMs: (ms: number) => Promise<void>
+  runState: {
+    runCountdownNumbers: (runId: number) => Promise<boolean>
+    runGuards: { canContinueRun: (runId: number) => boolean }
+    countdownRunId: Ref<number>
+  }
+}): (() => Promise<void>) => {
   return async (): Promise<void> => {
     stopPreRaceCountdown()
-    const runId = countdownRunId.value
+    const runId = resolveCountdownRunId(runState.countdownRunId)
 
-    const wasCancelledDuringNumbers = await runCountdownNumbers(runId)
-    if (wasCancelledDuringNumbers) {
+    if (await wasCountdownCancelledDuringNumbers({ runCountdownNumbers: runState.runCountdownNumbers, runId })) {
       return
     }
 
-    if (runId !== countdownRunId.value) {
+    if (!runState.runGuards.canContinueRun(runId)) {
       return
     }
 
-    preRaceCountdownValue.value = 0
-    preRaceCountdownLabel.value = 'RACE'
-    await waitMs(1500)
+    await playRaceLabelPhase({
+      preRaceCountdownValue,
+      preRaceCountdownLabel,
+      waitMs,
+    })
 
-    if (runId !== countdownRunId.value) {
+    if (!runState.runGuards.canContinueRun(runId)) {
       return
     }
 
-    preRaceCountdownValue.value = null
-    preRaceCountdownLabel.value = ''
+    clearCountdownDisplay({
+      preRaceCountdownValue,
+      preRaceCountdownLabel,
+    })
   }
+}
+
+const resolveCountdownRunId = (countdownRunId: Ref<number>): number => {
+  return countdownRunId.value
+}
+
+const createCountdownRunGuards = (
+  countdownRunId: Ref<number>,
+): {
+  canContinueRun: (runId: number) => boolean
+} => {
+  return {
+    canContinueRun: createCanContinueRun(countdownRunId),
+  }
+}
+
+const createCanContinueRun = (
+  countdownRunId: Ref<number>,
+): ((runId: number) => boolean) => {
+  return (runId: number): boolean => {
+    return !isCountdownRunInvalid({ countdownRunId, runId })
+  }
+}
+
+const playRaceLabelPhase = async ({
+  preRaceCountdownValue,
+  preRaceCountdownLabel,
+  waitMs,
+}: {
+  preRaceCountdownValue: Ref<number | null>
+  preRaceCountdownLabel: Ref<string>
+  waitMs: (ms: number) => Promise<void>
+}): Promise<void> => {
+  preRaceCountdownValue.value = 0
+  preRaceCountdownLabel.value = 'RACE'
+  await waitMs(1500)
+}
+
+const clearCountdownDisplay = ({
+  preRaceCountdownValue,
+  preRaceCountdownLabel,
+}: {
+  preRaceCountdownValue: Ref<number | null>
+  preRaceCountdownLabel: Ref<string>
+}): void => {
+  preRaceCountdownValue.value = null
+  preRaceCountdownLabel.value = ''
+}
+
+const wasCountdownCancelledDuringNumbers = async ({
+  runCountdownNumbers,
+  runId,
+}: {
+  runCountdownNumbers: (runId: number) => Promise<boolean>
+  runId: number
+}): Promise<boolean> => {
+  return runCountdownNumbers(runId)
+}
+
+const isCountdownRunInvalid = ({
+  countdownRunId,
+  runId,
+}: {
+  countdownRunId: Ref<number>
+  runId: number
+}): boolean => {
+  return runId !== countdownRunId.value
 }
 
 const createRunCountdownNumbers = ({

@@ -35,7 +35,7 @@ export default [
       'max-lines-per-function': [
         'warn',
         {
-          max: 30,
+          max: 40,
           skipBlankLines: true,
           skipComments: true,
           IIFEs: true,

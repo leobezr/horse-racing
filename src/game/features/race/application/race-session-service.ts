@@ -50,53 +50,195 @@ const pickRaceHorses = ({
   previousRaceHorseIds?: string[]
   rng: DeterministicRng
 }): HorseOption[] => {
+  const selectionContext = createRaceSelectionContext({
+    horses,
+    selectedHorseId,
+    selectedHorseIds,
+  })
+  if (selectionContext.preselectedHorses.length > gameConfig.raceHorseCount) {
+    return []
+  }
+
+  return createFinalRaceHorseSelection({
+    preselectedHorses: selectionContext.preselectedHorses,
+    availableHorses: selectionContext.availableHorses,
+    previousRaceHorseIds,
+    rng,
+  })
+}
+
+const createRaceSelectionContext = ({
+  horses,
+  selectedHorseId,
+  selectedHorseIds,
+}: {
+  horses: HorseOption[]
+  selectedHorseId?: string
+  selectedHorseIds?: string[]
+}): {
+  preselectedHorses: HorseOption[]
+  availableHorses: HorseOption[]
+} => {
   const selectedHorseIdsInput = resolveSelectedHorseIdsInput({
     selectedHorseId,
     selectedHorseIds,
   })
-
-  const preselectedHorses = selectedHorseIdsInput.map((selectedId) => {
-    return horses.find((horse) => {return horse.id === selectedId})
-  }).filter((horse): horse is HorseOption => {
-    return Boolean(horse)
+  const preselectedHorses = resolvePreselectedHorses({
+    horses,
+    selectedHorseIdsInput,
   })
-
-  if (preselectedHorses.length > gameConfig.raceHorseCount) {
-    return []
-  }
-
   const availableHorses = resolveAvailableHorses({
     horses,
     preselectedHorses,
   })
-  const previousHorseIdSet = new Set(previousRaceHorseIds ?? [])
-  const nonPreviousHorses = availableHorses.filter((horse) => {
-    return !previousHorseIdSet.has(horse.id)
-  })
-  const horsesNeeded = Math.max(0, gameConfig.raceHorseCount - preselectedHorses.length)
-  const nonPreviousPicked = pickRandomHorseSubset({
-    horses: nonPreviousHorses,
+
+  return {
+    preselectedHorses,
+    availableHorses,
+  }
+}
+
+const resolvePreselectedHorses = ({
+  horses,
+  selectedHorseIdsInput,
+}: {
+  horses: HorseOption[]
+  selectedHorseIdsInput: string[]
+}): HorseOption[] => {
+  return selectedHorseIdsInput
+    .map((selectedId) => {
+      return horses.find((horse) => {
+        return horse.id === selectedId
+      })
+    })
+    .filter((horse): horse is HorseOption => {
+      return Boolean(horse)
+    })
+}
+
+const createFinalRaceHorseSelection = ({
+  preselectedHorses,
+  availableHorses,
+  previousRaceHorseIds,
+  rng,
+}: {
+  preselectedHorses: HorseOption[]
+  availableHorses: HorseOption[]
+  previousRaceHorseIds?: string[]
+  rng: DeterministicRng
+}): HorseOption[] => {
+  const selectionStep = createSelectionStep({
+    availableHorses,
+    previousRaceHorseIds,
+    preselectedHorseCount: preselectedHorses.length,
     rng,
-    count: horsesNeeded,
   })
 
-  const remainingHorsesNeeded = Math.max(0, horsesNeeded - nonPreviousPicked.length)
+  const { nonPreviousPicked, remainingHorsesNeeded } = selectionStep
   if (remainingHorsesNeeded < 1) {
     return [...preselectedHorses, ...nonPreviousPicked]
   }
 
+  const fallbackPicked = resolveFallbackPicked({
+    availableHorses,
+    nonPreviousPicked,
+    remainingHorsesNeeded,
+    rng,
+  })
+
+  return [...preselectedHorses, ...nonPreviousPicked, ...fallbackPicked]
+}
+
+const createSelectionStep = ({
+  availableHorses,
+  previousRaceHorseIds,
+  preselectedHorseCount,
+  rng,
+}: {
+  availableHorses: HorseOption[]
+  previousRaceHorseIds?: string[]
+  preselectedHorseCount: number
+  rng: DeterministicRng
+}): {
+  nonPreviousPicked: HorseOption[]
+  remainingHorsesNeeded: number
+} => {
+  const nonPreviousPicked = resolveNonPreviousPicked({
+    availableHorses,
+    previousRaceHorseIds,
+    preselectedHorseCount,
+    rng,
+  })
+  const remainingHorsesNeeded = resolveRemainingHorsesNeeded({
+    preselectedHorseCount,
+    nonPreviousPickedCount: nonPreviousPicked.length,
+  })
+
+  return {
+    nonPreviousPicked,
+    remainingHorsesNeeded,
+  }
+}
+
+const resolveRemainingHorsesNeeded = ({
+  preselectedHorseCount,
+  nonPreviousPickedCount,
+}: {
+  preselectedHorseCount: number
+  nonPreviousPickedCount: number
+}): number => {
+  return Math.max(
+    0,
+    gameConfig.raceHorseCount - preselectedHorseCount - nonPreviousPickedCount,
+  )
+}
+
+const resolveNonPreviousPicked = ({
+  availableHorses,
+  previousRaceHorseIds,
+  preselectedHorseCount,
+  rng,
+}: {
+  availableHorses: HorseOption[]
+  previousRaceHorseIds?: string[]
+  preselectedHorseCount: number
+  rng: DeterministicRng
+}): HorseOption[] => {
+  const previousHorseIdSet = new Set(previousRaceHorseIds ?? [])
+  const nonPreviousHorses = availableHorses.filter((horse) => {
+    return !previousHorseIdSet.has(horse.id)
+  })
+  const horsesNeeded = Math.max(0, gameConfig.raceHorseCount - preselectedHorseCount)
+
+  return pickRandomHorseSubset({
+    horses: nonPreviousHorses,
+    rng,
+    count: horsesNeeded,
+  })
+}
+
+const resolveFallbackPicked = ({
+  availableHorses,
+  nonPreviousPicked,
+  remainingHorsesNeeded,
+  rng,
+}: {
+  availableHorses: HorseOption[]
+  nonPreviousPicked: HorseOption[]
+  remainingHorsesNeeded: number
+  rng: DeterministicRng
+}): HorseOption[] => {
   const fallbackHorses = availableHorses.filter((horse) => {
     return !nonPreviousPicked.some((pickedHorse) => {
       return pickedHorse.id === horse.id
     })
   })
-  const fallbackPicked = pickRandomHorseSubset({
+
+  return pickRandomHorseSubset({
     horses: fallbackHorses,
     rng,
     count: remainingHorsesNeeded,
   })
-
-  return [...preselectedHorses, ...nonPreviousPicked, ...fallbackPicked]
 }
 
 const resolveSelectedHorseIdsInput = ({
@@ -208,61 +350,279 @@ export const createRaceSession = async ({
   horsePool?: HorseOption[]
   previousRaceHorseIds?: string[]
 }): Promise<RaceSession> => {
-  const rng = createDeterministicRng(resolveSessionSeedInput(seedInput))
-  const resolvedHorsePool = resolveHorsePool({ horsePool, rng })
-  const horses = assignRaceLanes(pickRaceHorses({
-    horses: resolvedHorsePool,
+  const raceSessionContext = await createRaceSessionContext({
+    seedInput,
     selectedHorseId,
     selectedHorseIds,
+    horsePool,
     previousRaceHorseIds,
-    rng,
-  }))
+  })
+  return buildRaceSessionFromContext({
+    raceSessionContext,
+    selectedHorseId,
+    selectedHorseIds,
+  })
+}
 
-  if (horses.length === 0) {
-    throw new Error('No race horses available to start session.')
+const buildRaceSessionFromContext = ({
+  raceSessionContext,
+  selectedHorseId,
+  selectedHorseIds,
+}: {
+  raceSessionContext: {
+    rng: DeterministicRng
+    horses: HorseOption[]
+    race: RaceSession['race']
+    renderSheets: RaceSession['renderSheets']
   }
+  selectedHorseId?: string
+  selectedHorseIds?: string[]
+}): RaceSession => {
+  const sessionSelection = resolveSessionSelection({
+    raceSessionContext,
+    selectedHorseId,
+    selectedHorseIds,
+  })
+
+  return createRaceSessionOutput({
+    raceSessionContext,
+    resolvedSelectedId: sessionSelection.resolvedSelectedId,
+  })
+}
+
+const resolveSessionSelection = ({
+  raceSessionContext,
+  selectedHorseId,
+  selectedHorseIds,
+}: {
+  raceSessionContext: {
+    rng: DeterministicRng
+    horses: HorseOption[]
+    race: RaceSession['race']
+    renderSheets: RaceSession['renderSheets']
+  }
+  selectedHorseId?: string
+  selectedHorseIds?: string[]
+}): {
+  resolvedSelectedId: string
+} => {
+  const { horses, race } = raceSessionContext
+  ensureRaceHorsesAvailable(horses)
 
   const resolvedSelectedId = resolveSelectedHorseId({
     horses,
     selectedHorseId,
     selectedHorseIds,
   })
-
-  const race = runDeterministicRace({ horses, rng })
   applyRaceMetadataToHorses({
     horses,
     race,
     resolvedSelectedId,
   })
 
-  const lanes = createTrackLanes()
-  const loadedFramePairs = await loadHorseFrameAssets()
-  const renderSheets = buildHorseRenderSheets({
-    horses,
-    loadedFramePairs,
-    maskSourceColors: getMaskSourceColors(),
-  })
+  return { resolvedSelectedId }
+}
 
+const createRaceSessionOutput = ({
+  raceSessionContext,
+  resolvedSelectedId,
+}: {
+  raceSessionContext: {
+    rng: DeterministicRng
+    horses: HorseOption[]
+    race: RaceSession['race']
+    renderSheets: RaceSession['renderSheets']
+  }
+  resolvedSelectedId: string
+}): RaceSession => {
+  const { rng, horses, race, renderSheets } = raceSessionContext
   return {
     seedText: rng.seedText,
     horses,
-    lanes,
+    lanes: createTrackLanes(),
     race,
     selectedHorseId: resolvedSelectedId,
     renderSheets,
   }
 }
 
-export const createRacePoolPreview = async ({ seedInput }: { seedInput?: string }): Promise<RacePoolPreview> => {
-  const rng = createDeterministicRng(resolveSessionSeedInput(seedInput))
-  const horses = createHorseOptions(rng)
-  const loadedFramePairs = await loadHorseFrameAssets()
+const ensureRaceHorsesAvailable = (horses: HorseOption[]): void => {
+  if (horses.length === 0) {
+    throw new Error('No race horses available to start session.')
+  }
+}
 
-  const renderSheets = buildHorseRenderSheets({
+const createRaceSessionContext = async ({
+  seedInput,
+  selectedHorseId,
+  selectedHorseIds,
+  horsePool,
+  previousRaceHorseIds,
+}: {
+  seedInput?: string
+  selectedHorseId?: string
+  selectedHorseIds?: string[]
+  horsePool?: HorseOption[]
+  previousRaceHorseIds?: string[]
+}): Promise<{
+  rng: DeterministicRng
+  horses: HorseOption[]
+  race: RaceSession['race']
+  renderSheets: RaceSession['renderSheets']
+}> => {
+  const rng = createRaceSessionRng(seedInput)
+  const raceContext = await createRaceSessionRaceContextFromInput({
+    horsePool,
+    rng,
+    selectedHorseId,
+    selectedHorseIds,
+    previousRaceHorseIds,
+  })
+
+  return createRaceSessionContextOutput({
+    rng,
+    raceContext,
+  })
+}
+
+const createRaceSessionRaceContextFromInput = async ({
+  horsePool,
+  rng,
+  selectedHorseId,
+  selectedHorseIds,
+  previousRaceHorseIds,
+}: {
+  horsePool?: HorseOption[]
+  rng: DeterministicRng
+  selectedHorseId?: string
+  selectedHorseIds?: string[]
+  previousRaceHorseIds?: string[]
+}) => {
+  return createRaceSessionRaceContext({
+    horsePool,
+    rng,
+    selectedHorseId,
+    selectedHorseIds,
+    previousRaceHorseIds,
+  })
+}
+
+const createRaceSessionRng = (seedInput?: string): DeterministicRng => {
+  return createDeterministicRng(resolveSessionSeedInput(seedInput))
+}
+
+const createRaceSessionContextOutput = ({
+  rng,
+  raceContext,
+}: {
+  rng: DeterministicRng
+  raceContext: {
+    horses: HorseOption[]
+    race: RaceSession['race']
+    renderSheets: RaceSession['renderSheets']
+  }
+}): {
+  rng: DeterministicRng
+  horses: HorseOption[]
+  race: RaceSession['race']
+  renderSheets: RaceSession['renderSheets']
+} => {
+  return {
+    rng,
+    horses: raceContext.horses,
+    race: raceContext.race,
+    renderSheets: raceContext.renderSheets,
+  }
+}
+
+const createRaceSessionRaceContext = async ({
+  horsePool,
+  rng,
+  selectedHorseId,
+  selectedHorseIds,
+  previousRaceHorseIds,
+}: {
+  horsePool?: HorseOption[]
+  rng: DeterministicRng
+  selectedHorseId?: string
+  selectedHorseIds?: string[]
+  previousRaceHorseIds?: string[]
+}): Promise<{
+  horses: HorseOption[]
+  race: RaceSession['race']
+  renderSheets: RaceSession['renderSheets']
+}> => {
+  const horses = createRaceSessionHorses({
+    horsePool,
+    rng,
+    selectedHorseId,
+    selectedHorseIds,
+    previousRaceHorseIds,
+  })
+  return createRaceSessionRenderedData({ horses, rng })
+}
+
+const createRaceSessionRenderedData = async ({
+  horses,
+  rng,
+}: {
+  horses: HorseOption[]
+  rng: DeterministicRng
+}): Promise<{
+  horses: HorseOption[]
+  race: RaceSession['race']
+  renderSheets: RaceSession['renderSheets']
+}> => {
+  const race = runDeterministicRace({ horses, rng })
+  const renderSheets = await createRenderSheets({ horses })
+
+  return {
+    horses,
+    race,
+    renderSheets,
+  }
+}
+
+const createRaceSessionHorses = ({
+  horsePool,
+  rng,
+  selectedHorseId,
+  selectedHorseIds,
+  previousRaceHorseIds,
+}: {
+  horsePool?: HorseOption[]
+  rng: DeterministicRng
+  selectedHorseId?: string
+  selectedHorseIds?: string[]
+  previousRaceHorseIds?: string[]
+}): HorseOption[] => {
+  const resolvedHorsePool = resolveHorsePool({ horsePool, rng })
+  return assignRaceLanes(pickRaceHorses({
+    horses: resolvedHorsePool,
+    selectedHorseId,
+    selectedHorseIds,
+    previousRaceHorseIds,
+    rng,
+  }))
+}
+
+const createRenderSheets = async ({
+  horses,
+}: {
+  horses: HorseOption[]
+}): Promise<RaceSession['renderSheets']> => {
+  const loadedFramePairs = await loadHorseFrameAssets()
+  return buildHorseRenderSheets({
     horses,
     loadedFramePairs,
     maskSourceColors: getMaskSourceColors(),
   })
+}
+
+export const createRacePoolPreview = async ({ seedInput }: { seedInput?: string }): Promise<RacePoolPreview> => {
+  const rng = createDeterministicRng(resolveSessionSeedInput(seedInput))
+  const horses = createHorseOptions(rng)
+  const renderSheets = await createRenderSheets({ horses })
 
   return {
     seedText: rng.seedText,

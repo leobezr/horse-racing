@@ -59,41 +59,133 @@ const getSelectedHorseForRace = ({
 const buildRaceSession = async (
   input: BuildRaceSessionInput,
 ): Promise<BuildRaceSessionOutput | null> => {
-  const selectedHorseIdsInput = getSelectedHorseIdsInput(input)
-  const selectedHorseInput = getSelectedHorseInput(input);
-  if (selectedHorseInput === null || selectedHorseIdsInput.length === 0) {
+  const selection = createBuildRaceSelection(input)
+  if (!canBuildRaceSessionFromInput({ input, selection })) {
     return null;
   }
 
-  if (!canBuildRaceSession(input)) {
-    return null;
-  }
-
-  const replayRequest = input.consumeReplayRequest();
-  const currentSeed = replayRequest?.seedText ?? input.poolSeed;
-  const selectedHorseForRace = getSelectedHorseForRace({
+  const replaySelection = resolveReplaySelection(input)
+  const selectedHorseForRace = resolveSelectedHorseForRace({
     input,
-    selectedHorseIdsInput,
-    replaySelectedHorseId: replayRequest?.selectedHorseId,
-  });
+    selectedHorseIdsInput: selection.selectedHorseIdsInput,
+    replaySelection,
+  })
 
   if (!selectedHorseForRace) {
     return null;
   }
 
-  const nextSession = await createRaceSession({
+  const nextSession = await createRaceSessionWithInput({
+    input,
+    selectedHorseForRace,
+    selectedHorseIdsInput: selection.selectedHorseIdsInput,
+    currentSeed: replaySelection.currentSeed,
+  })
+
+  return createBuildRaceSessionOutput(nextSession)
+};
+
+const createBuildRaceSessionOutput = (
+  raceSession: BuildRaceSessionOutput['raceSession'],
+): BuildRaceSessionOutput => {
+  return {
+    selectedHorseId: raceSession.selectedHorseId,
+    raceSession,
+  }
+}
+
+const createBuildRaceSelection = (input: BuildRaceSessionInput): {
+  selectedHorseInput: string | null
+  selectedHorseIdsInput: string[]
+} => {
+  return {
+    selectedHorseInput: getSelectedHorseInput(input),
+    selectedHorseIdsInput: getSelectedHorseIdsInput(input),
+  }
+}
+
+const canBuildRaceSessionFromInput = ({
+  input,
+  selection,
+}: {
+  input: BuildRaceSessionInput
+  selection: {
+    selectedHorseInput: string | null
+    selectedHorseIdsInput: string[]
+  }
+}): boolean => {
+  if (!isRaceSessionInputValid(selection)) {
+    return false
+  }
+
+  return canBuildRaceSession(input)
+}
+
+const resolveSelectedHorseForRace = ({
+  input,
+  selectedHorseIdsInput,
+  replaySelection,
+}: {
+  input: BuildRaceSessionInput
+  selectedHorseIdsInput: string[]
+  replaySelection: {
+    replaySelectedHorseId: string | null | undefined
+    currentSeed: string
+  }
+}): string | null => {
+  return getSelectedHorseForRace({
+    input,
+    selectedHorseIdsInput,
+    replaySelectedHorseId: replaySelection.replaySelectedHorseId,
+  })
+}
+
+const isRaceSessionInputValid = ({
+  selectedHorseInput,
+  selectedHorseIdsInput,
+}: {
+  selectedHorseInput: string | null
+  selectedHorseIdsInput: string[]
+}): boolean => {
+  if (selectedHorseInput === null) {
+    return false
+  }
+
+  return selectedHorseIdsInput.length > 0
+}
+
+const resolveReplaySelection = (
+  input: BuildRaceSessionInput,
+): {
+  replaySelectedHorseId: string | null | undefined
+  currentSeed: string
+} => {
+  const replayRequest = input.consumeReplayRequest();
+  return {
+    replaySelectedHorseId: replayRequest?.selectedHorseId,
+    currentSeed: replayRequest?.seedText ?? input.poolSeed,
+  }
+}
+
+const createRaceSessionWithInput = async ({
+  input,
+  selectedHorseForRace,
+  selectedHorseIdsInput,
+  currentSeed,
+}: {
+  input: BuildRaceSessionInput
+  selectedHorseForRace: string
+  selectedHorseIdsInput: string[]
+  currentSeed: string
+}): Promise<BuildRaceSessionOutput['raceSession']> => {
+  return createRaceSession({
     seedInput: currentSeed,
     selectedHorseId: selectedHorseForRace,
     selectedHorseIds: selectedHorseIdsInput,
     horsePool: input.horsePool,
     previousRaceHorseIds: input.previousRaceHorseIds,
   });
-
-  return {
-    selectedHorseId: nextSession.selectedHorseId,
-    raceSession: nextSession,
-  };
-};
+}
 
 /**
  * Creates an adapter that builds race sessions and records resulting bet history.

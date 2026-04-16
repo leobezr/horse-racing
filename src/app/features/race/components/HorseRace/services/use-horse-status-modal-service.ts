@@ -15,6 +15,26 @@ type HorseStatusState = {
   statusFrameTimerId: TimerRef;
   statusFrameIntervalMs: number;
 };
+type ResolveStatusDrawDataInput = {
+  activeHorseStatus: HorseStatusRef;
+  statusCanvasRef: CanvasRef;
+  renderSheets: RenderSheetsRef;
+  statusFrameIndex: NumberRef;
+  frameIndexOverride?: number;
+};
+type ResolveStatusDrawDataOutput = {
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+  frame: HTMLCanvasElement;
+};
+type StartStatusAnimationInput = {
+  statusFrameTimerId: TimerRef;
+  statusFrameIndex: NumberRef;
+  activeHorseStatus: HorseStatusRef;
+  statusCanvasRef: CanvasRef;
+  renderSheets: RenderSheetsRef;
+  statusFrameIntervalMs: number;
+};
 
 const resolveActiveHorseStatus = ({
   horseOptions,
@@ -67,23 +87,30 @@ const resolveStatusDrawData = ({
   renderSheets,
   statusFrameIndex,
   frameIndexOverride,
-}: {
-  activeHorseStatus: HorseStatusRef;
-  statusCanvasRef: CanvasRef;
-  renderSheets: RenderSheetsRef;
-  statusFrameIndex: NumberRef;
-  frameIndexOverride?: number;
-}):
-  | {
-      canvas: HTMLCanvasElement;
-      context: CanvasRenderingContext2D;
-      frame: HTMLCanvasElement;
-    }
-  | null => {
+}: ResolveStatusDrawDataInput): ResolveStatusDrawDataOutput | null => {
   const horseCanvasData = resolveHorseCanvasData({
     activeHorseStatus,
     statusCanvasRef,
   });
+  return resolveStatusDrawDataFromHorseCanvas({
+    horseCanvasData,
+    renderSheets,
+    statusFrameIndex,
+    frameIndexOverride,
+  });
+};
+
+const resolveStatusDrawDataFromHorseCanvas = ({
+  horseCanvasData,
+  renderSheets,
+  statusFrameIndex,
+  frameIndexOverride,
+}: {
+  horseCanvasData: { horse: HorseOption; canvas: HTMLCanvasElement } | null;
+  renderSheets: RenderSheetsRef;
+  statusFrameIndex: NumberRef;
+  frameIndexOverride?: number;
+}): ResolveStatusDrawDataOutput | null => {
   if (!horseCanvasData) {
     return null;
   }
@@ -100,15 +127,12 @@ const resolveStatusDrawData = ({
     statusFrameIndex,
     frameIndexOverride,
   });
+
   if (!frame) {
     return null;
   }
 
-  return {
-    canvas,
-    context,
-    frame,
-  };
+  return { canvas, context, frame };
 };
 
 const resolveHorseCanvasData = ({
@@ -171,14 +195,7 @@ const startStatusAnimation = ({
   statusCanvasRef,
   renderSheets,
   statusFrameIntervalMs,
-}: {
-  statusFrameTimerId: TimerRef;
-  statusFrameIndex: NumberRef;
-  activeHorseStatus: HorseStatusRef;
-  statusCanvasRef: CanvasRef;
-  renderSheets: RenderSheetsRef;
-  statusFrameIntervalMs: number;
-}): void => {
+}: StartStatusAnimationInput): void => {
   resetStatusAnimation({
     statusFrameTimerId,
     statusFrameIndex,
@@ -324,8 +341,8 @@ export const useHorseStatusModalService = ({
       renderSheets,
     });
 
-  onBeforeUnmount(() => {
-    stopStatusAnimation({ statusFrameTimerId: state.statusFrameTimerId });
+  registerHorseStatusUnmountHook({
+    statusFrameTimerId: state.statusFrameTimerId,
   });
 
   return {
@@ -337,6 +354,16 @@ export const useHorseStatusModalService = ({
   };
 };
 
+const registerHorseStatusUnmountHook = ({
+  statusFrameTimerId,
+}: {
+  statusFrameTimerId: TimerRef;
+}): void => {
+  onBeforeUnmount(() => {
+    stopStatusAnimation({ statusFrameTimerId });
+  });
+};
+
 const createHorseStatusActions = ({
   state,
   horseOptions,
@@ -346,27 +373,16 @@ const createHorseStatusActions = ({
   horseOptions: HorseOptionsRef;
   renderSheets: RenderSheetsRef;
 }) => {
-  const activeHorseStatus = computed<HorseOption | null>(() => {
-    return resolveActiveHorseStatus({
-      horseOptions,
-      activeHorseStatusId: state.activeHorseStatusId,
-    });
-  });
-
-  const openHorseStatus = createOpenHorseStatus({
+  const activeHorseStatus = createActiveHorseStatus({
+    horseOptions,
     activeHorseStatusId: state.activeHorseStatusId,
-    statusFrameTimerId: state.statusFrameTimerId,
-    statusFrameIndex: state.statusFrameIndex,
+  });
+  const openHorseStatus = createOpenHorseStatusFromState({
+    state,
     activeHorseStatus,
-    statusCanvasRef: state.statusCanvasRef,
     renderSheets,
-    statusFrameIntervalMs: state.statusFrameIntervalMs,
   });
-
-  const closeHorseStatus = createCloseHorseStatus({
-    activeHorseStatusId: state.activeHorseStatusId,
-    statusFrameTimerId: state.statusFrameTimerId,
-  });
+  const closeHorseStatus = createCloseHorseStatusFromState(state);
 
   const onStatusDialogModelUpdate = createOnStatusDialogModelUpdate({
     closeHorseStatus,
@@ -378,6 +394,50 @@ const createHorseStatusActions = ({
     closeHorseStatus,
     onStatusDialogModelUpdate,
   };
+};
+
+const createActiveHorseStatus = ({
+  horseOptions,
+  activeHorseStatusId,
+}: {
+  horseOptions: HorseOptionsRef;
+  activeHorseStatusId: { value: string | null };
+}): HorseStatusRef => {
+  return computed<HorseOption | null>(() => {
+    return resolveActiveHorseStatus({
+      horseOptions,
+      activeHorseStatusId,
+    });
+  });
+};
+
+const createOpenHorseStatusFromState = ({
+  state,
+  activeHorseStatus,
+  renderSheets,
+}: {
+  state: HorseStatusState;
+  activeHorseStatus: HorseStatusRef;
+  renderSheets: RenderSheetsRef;
+}): ((horseId: string) => Promise<void>) => {
+  return createOpenHorseStatus({
+    activeHorseStatusId: state.activeHorseStatusId,
+    statusFrameTimerId: state.statusFrameTimerId,
+    statusFrameIndex: state.statusFrameIndex,
+    activeHorseStatus,
+    statusCanvasRef: state.statusCanvasRef,
+    renderSheets,
+    statusFrameIntervalMs: state.statusFrameIntervalMs,
+  });
+};
+
+const createCloseHorseStatusFromState = (
+  state: HorseStatusState,
+): (() => void) => {
+  return createCloseHorseStatus({
+    activeHorseStatusId: state.activeHorseStatusId,
+    statusFrameTimerId: state.statusFrameTimerId,
+  });
 };
 
 const createHorseStatusState = (): HorseStatusState => {

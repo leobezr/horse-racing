@@ -45,57 +45,235 @@ export const createLiveHorseProgress = ({
   raceSnapshots: RaceSnapshot[]
   roundSummaries: RaceRoundSummary[]
 }): LiveHorseProgress[] => {
-  type LiveHorseProgressSortable = LiveHorseProgress & {
-    finishedAtTick: number | null
-  }
-
   const activeRoundSummary = roundSummaries.find((roundSummary) => {
     return tickIndex >= roundSummary.startTick && tickIndex <= roundSummary.endTick
   })
   const roundStartTick = activeRoundSummary?.startTick ?? 0
 
-  const progress: LiveHorseProgressSortable[] = horses.map((horse) => {
-    const distance = Math.min(finishDistance, snapshotByHorseId.get(horse.id) ?? 0)
-    const distanceToFinish = Math.max(0, finishDistance - distance)
-    const tickCount = Math.max(1, tickIndex + 1)
-    const averageSpeed = distance / tickCount
-    const estimatedTicksToFinish = averageSpeed > 0 ? distanceToFinish / averageSpeed : Number.POSITIVE_INFINITY
-    const estimatedSecondsToFinish =
-      Number.isFinite(estimatedTicksToFinish) && distanceToFinish > 0? Number.parseFloat(((estimatedTicksToFinish * gameConfig.animation.tickMs) / 1000).toFixed(2)): null
+  const progress = createProgressRows({
+    horses,
+    snapshotByHorseId,
+    finishDistance,
+    tickIndex,
+    raceSnapshots,
+    roundStartTick,
+    roundEndTick: Math.min(tickIndex, activeRoundSummary?.endTick ?? tickIndex),
+  })
+  sortProgressRows(progress)
+  return toLiveHorseProgress(progress)
+}
 
-    let resolvedRaceTick = tickIndex
-    const roundEndTick = Math.min(tickIndex, activeRoundSummary?.endTick ?? tickIndex)
-    for (let snapshotIndex = roundStartTick; snapshotIndex <= roundEndTick; snapshotIndex += 1) {
-      const snapshot = raceSnapshots[snapshotIndex] ?? []
-      const horseSnapshot = snapshot.find((entry) => {
-        return entry.id === horse.id
-      })
-      const resolvedDistance = horseSnapshot?.distance ?? 0
-      if (resolvedDistance >= finishDistance) {
-        resolvedRaceTick = snapshotIndex
-        break
-      }
-    }
+type LiveHorseProgressSortable = LiveHorseProgress & {
+  finishedAtTick: number | null
+}
 
-    const raceTimeSeconds = Number.parseFloat(
-      ((Math.max(0, resolvedRaceTick - roundStartTick + 1) * gameConfig.animation.tickMs) / 1000).toFixed(2),
-    )
+const createProgressRows = ({
+  horses,
+  snapshotByHorseId,
+  finishDistance,
+  tickIndex,
+  raceSnapshots,
+  roundStartTick,
+  roundEndTick,
+}: {
+  horses: HorseOption[]
+  snapshotByHorseId: Map<string, number>
+  finishDistance: number
+  tickIndex: number
+  raceSnapshots: RaceSnapshot[]
+  roundStartTick: number
+  roundEndTick: number
+}): LiveHorseProgressSortable[] => {
+  return horses.map((horse) => {
+    return createHorseProgressRow({
+      horse,
+      snapshotByHorseId,
+      finishDistance,
+      tickIndex,
+      raceSnapshots,
+      roundStartTick,
+      roundEndTick,
+    })
+  })
+}
 
-    const finishedAtTick = distance >= finishDistance ? resolvedRaceTick : null
-
-    return {
-      id: horse.id,
-      name: horse.name,
-      laneNumber: horse.laneNumber,
-      position: 0,
-      raceTimeSeconds,
-      finishedAtTick,
-      distance,
-      distanceToFinish,
-      estimatedSecondsToFinish,
-    }
+const createHorseProgressRow = ({
+  horse,
+  snapshotByHorseId,
+  finishDistance,
+  tickIndex,
+  raceSnapshots,
+  roundStartTick,
+  roundEndTick,
+}: CreateHorseProgressRowInput): LiveHorseProgressSortable => {
+  const baseProgress = resolveHorseBaseProgress({
+    horse,
+    snapshotByHorseId,
+    finishDistance,
+    tickIndex,
+  })
+  const resolvedRaceTick = resolveRaceTick({
+    horseId: horse.id,
+    finishDistance,
+    raceSnapshots,
+    roundStartTick,
+    roundEndTick,
+    tickIndex,
+  })
+  const raceTimeSeconds = resolveRaceTimeSeconds({
+    resolvedRaceTick,
+    roundStartTick,
   })
 
+  return createHorseProgressRowOutput({
+    horse,
+    baseProgress,
+    raceTimeSeconds,
+    resolvedRaceTick,
+    finishDistance,
+  })
+}
+
+type CreateHorseProgressRowInput = {
+  horse: HorseOption
+  snapshotByHorseId: Map<string, number>
+  finishDistance: number
+  tickIndex: number
+  raceSnapshots: RaceSnapshot[]
+  roundStartTick: number
+  roundEndTick: number
+}
+
+const resolveHorseBaseProgress = ({
+  horse,
+  snapshotByHorseId,
+  finishDistance,
+  tickIndex,
+}: {
+  horse: HorseOption
+  snapshotByHorseId: Map<string, number>
+  finishDistance: number
+  tickIndex: number
+}): {
+  distance: number
+  distanceToFinish: number
+  estimatedSecondsToFinish: number | null
+} => {
+  const distance = Math.min(finishDistance, snapshotByHorseId.get(horse.id) ?? 0)
+  const distanceToFinish = Math.max(0, finishDistance - distance)
+  const estimatedSecondsToFinish = resolveEstimatedSecondsToFinish({
+    distance,
+    distanceToFinish,
+    tickIndex,
+  })
+
+  return {
+    distance,
+    distanceToFinish,
+    estimatedSecondsToFinish,
+  }
+}
+
+const createHorseProgressRowOutput = ({
+  horse,
+  baseProgress,
+  raceTimeSeconds,
+  resolvedRaceTick,
+  finishDistance,
+}: {
+  horse: HorseOption
+  baseProgress: {
+    distance: number
+    distanceToFinish: number
+    estimatedSecondsToFinish: number | null
+  }
+  raceTimeSeconds: number
+  resolvedRaceTick: number
+  finishDistance: number
+}): LiveHorseProgressSortable => {
+  return {
+    id: horse.id,
+    name: horse.name,
+    laneNumber: horse.laneNumber,
+    position: 0,
+    raceTimeSeconds,
+    finishedAtTick:
+      baseProgress.distance >= finishDistance ? resolvedRaceTick : null,
+    distance: baseProgress.distance,
+    distanceToFinish: baseProgress.distanceToFinish,
+    estimatedSecondsToFinish: baseProgress.estimatedSecondsToFinish,
+  }
+}
+
+const resolveEstimatedSecondsToFinish = ({
+  distance,
+  distanceToFinish,
+  tickIndex,
+}: {
+  distance: number
+  distanceToFinish: number
+  tickIndex: number
+}): number | null => {
+  const tickCount = Math.max(1, tickIndex + 1)
+  const averageSpeed = distance / tickCount
+  if (averageSpeed <= 0 || distanceToFinish <= 0) {
+    return null
+  }
+
+  const estimatedTicksToFinish = distanceToFinish / averageSpeed
+  if (!Number.isFinite(estimatedTicksToFinish)) {
+    return null
+  }
+
+  return Number.parseFloat(
+    ((estimatedTicksToFinish * gameConfig.animation.tickMs) / 1000).toFixed(2),
+  )
+}
+
+const resolveRaceTick = ({
+  horseId,
+  finishDistance,
+  raceSnapshots,
+  roundStartTick,
+  roundEndTick,
+  tickIndex,
+}: {
+  horseId: string
+  finishDistance: number
+  raceSnapshots: RaceSnapshot[]
+  roundStartTick: number
+  roundEndTick: number
+  tickIndex: number
+}): number => {
+  let resolvedRaceTick = tickIndex
+  for (let snapshotIndex = roundStartTick; snapshotIndex <= roundEndTick; snapshotIndex += 1) {
+    const snapshot = raceSnapshots[snapshotIndex] ?? []
+    const horseSnapshot = snapshot.find((entry) => {
+      return entry.id === horseId
+    })
+    const resolvedDistance = horseSnapshot?.distance ?? 0
+    if (resolvedDistance >= finishDistance) {
+      resolvedRaceTick = snapshotIndex
+      break
+    }
+  }
+
+  return resolvedRaceTick
+}
+
+const resolveRaceTimeSeconds = ({
+  resolvedRaceTick,
+  roundStartTick,
+}: {
+  resolvedRaceTick: number
+  roundStartTick: number
+}): number => {
+  return Number.parseFloat(
+    ((Math.max(0, resolvedRaceTick - roundStartTick + 1) * gameConfig.animation.tickMs) / 1000).toFixed(2),
+  )
+}
+
+const sortProgressRows = (progress: LiveHorseProgressSortable[]): void => {
   progress.sort((left, right) => {
     if (right.distance !== left.distance) {
       return right.distance - left.distance
@@ -109,9 +287,13 @@ export const createLiveHorseProgress = ({
 
     return left.laneNumber - right.laneNumber
   })
+}
 
+const toLiveHorseProgress = (
+  progress: LiveHorseProgressSortable[],
+): LiveHorseProgress[] => {
   return progress.map((horse, index) => {
-    const visibleHorse = {
+    return {
       id: horse.id,
       name: horse.name,
       laneNumber: horse.laneNumber,
@@ -119,9 +301,6 @@ export const createLiveHorseProgress = ({
       distance: horse.distance,
       distanceToFinish: horse.distanceToFinish,
       estimatedSecondsToFinish: horse.estimatedSecondsToFinish,
-    }
-    return {
-      ...visibleHorse,
       position: index + 1,
     }
   })

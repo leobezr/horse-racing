@@ -65,6 +65,18 @@ const recolorMaskCanvas = ({
   maskSourceColors: HorseColorMap
   targetColors: HorseColorMap
 }): HTMLCanvasElement => {
+  const { canvas, context } = createRecolorCanvas(maskImage)
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+  const paletteMap = getPaletteMap(maskSourceColors, targetColors)
+  applyPaletteRecolor({ imageData, paletteMap })
+  context.putImageData(imageData, 0, 0)
+  return canvas
+}
+
+const createRecolorCanvas = (maskImage: HTMLImageElement): {
+  canvas: HTMLCanvasElement
+  context: CanvasRenderingContext2D
+} => {
   const canvas = document.createElement('canvas')
   const context = canvas.getContext('2d', { willReadFrequently: true })
 
@@ -76,29 +88,54 @@ const recolorMaskCanvas = ({
   canvas.height = maskImage.height
   context.drawImage(maskImage, 0, 0)
 
-  const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-  const paletteMap = getPaletteMap(maskSourceColors, targetColors)
+  return { canvas, context }
+}
 
+const applyPaletteRecolor = ({
+  imageData,
+  paletteMap,
+}: {
+  imageData: ImageData
+  paletteMap: Array<{
+    source: { red: number; green: number; blue: number }
+    target: { red: number; green: number; blue: number }
+  }>
+}): void => {
   for (let index = 0; index < imageData.data.length; index += 4) {
-    const red = imageData.data[index]
-    const green = imageData.data[index + 1]
-    const blue = imageData.data[index + 2]
-    const alpha = imageData.data[index + 3]
+    applyPixelRecolor({ imageData, paletteMap, index })
+  }
+}
 
-    if (alpha === 0) {
-      continue
-    }
-
-    const replacement = getReplacementColor({ red, green, blue }, paletteMap)
-    if (replacement) {
-      imageData.data[index] = replacement.red
-      imageData.data[index + 1] = replacement.green
-      imageData.data[index + 2] = replacement.blue
-    }
+const applyPixelRecolor = ({
+  imageData,
+  paletteMap,
+  index,
+}: {
+  imageData: ImageData
+  paletteMap: Array<{
+    source: { red: number; green: number; blue: number }
+    target: { red: number; green: number; blue: number }
+  }>
+  index: number
+}): void => {
+  const alpha = imageData.data[index + 3]
+  if (alpha === 0) {
+    return
   }
 
-  context.putImageData(imageData, 0, 0)
-  return canvas
+  const replacement = getReplacementColor({
+    red: imageData.data[index],
+    green: imageData.data[index + 1],
+    blue: imageData.data[index + 2],
+  }, paletteMap)
+
+  if (!replacement) {
+    return
+  }
+
+  imageData.data[index] = replacement.red
+  imageData.data[index + 1] = replacement.green
+  imageData.data[index + 2] = replacement.blue
 }
 
 const composeHorseFrame = ({

@@ -45,8 +45,8 @@ defineProps({
     required: true,
   },
   selectedHorseId: {
-    type: String,
-    required: true,
+    type: [null, String] as PropType<string | null>,
+    default: null
   },
   bindIdleCanvas: {
     type: Function as PropType<(node: Element | null, horseId: string) => void>,

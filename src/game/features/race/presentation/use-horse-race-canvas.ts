@@ -152,11 +152,11 @@ export const useHorseRaceCanvas = ({
   const animationFrameId = ref<number | null>(null);
   const startEpochMs = ref<number>(0);
   const isRaceConcluded = ref<boolean>(false);
-  const preRaceCountdownValue = ref<number | null>(null);
+  const preRaceCountdownValue = ref<number>(0);
   const preRaceCountdownLabel = ref<string>("");
   const preRaceCountdownTimerId = ref<number | null>(null);
   const countdownRunId = ref<number>(0);
-  const betweenRoundsCountdownValue = ref<number | null>(null);
+  const betweenRoundsCountdownValue = ref<number>(0);
   const betweenRoundsTimerId = ref<number | null>(null);
   const betweenRoundsTimerResolve = ref<(() => void) | null>(null);
   const betweenRoundsRunId = ref<number>(0);
@@ -318,7 +318,7 @@ export const useHorseRaceCanvas = ({
       betweenRoundsTimerResolve.value();
       betweenRoundsTimerResolve.value = null;
     }
-    betweenRoundsCountdownValue.value = null;
+    betweenRoundsCountdownValue.value = 0;
     isAwaitingBetweenRoundsBet.value = false;
   };
 
