@@ -8,7 +8,7 @@
       rounded="pill"
       @click="onOpenRaceSetup"
     >
-      {{ isLoading ? "Building..." : "New Race" }}
+      {{ isLoading ? "Building..." : "Generate Race Schedule" }}
     </v-btn>
 
     <p class="game__credit" data-test="app-race-credit">

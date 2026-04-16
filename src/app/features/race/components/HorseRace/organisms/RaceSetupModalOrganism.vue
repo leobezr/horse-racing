@@ -95,9 +95,9 @@
           @click="onStartRaceWithPendingHorse"
         >
           <template v-if="isAwaitingBetweenRoundsBet">
-            Next - {{ betweenRoundsCountdownValue ?? 0 }}
+            Start - {{ betweenRoundsCountdownValue ?? 0 }}
           </template>
-          <template v-else>Next</template>
+          <template v-else>Start</template>
         </v-btn>
       </footer>
     </v-card>
