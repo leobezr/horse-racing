@@ -1,45 +1,25 @@
 import type { Meta, StoryObj } from "@storybook/vue3";
 import { gameConfig } from "@/config/game.config";
+import {
+  createFrameVisibleBoundsReader,
+  getFallbackFrameVisibleBounds,
+} from "@/game/features/race/presentation/lib/frame-visible-bounds-cache";
+import { createTrackCanvasRenderer } from "@/game/features/race/presentation/lib/track-canvas-renderer";
 import RaceCanvasOrganism from "./RaceCanvasOrganism.vue";
 
-const createCanvasBinder = ({
-  laneCount,
-  trackWidth,
-  trackHeight,
-}: {
-  laneCount: number;
-  trackWidth: number;
-  trackHeight: number;
-}): ((element: Element | null) => void) => {
+const createCanvasBinder = (): ((element: Element | null) => void) => {
+  const { getFrameVisibleBounds } = createFrameVisibleBoundsReader();
+  const { renderEmptyTrack } = createTrackCanvasRenderer({
+    getFrameVisibleBounds,
+    getFallbackFrameVisibleBounds,
+  });
+
   return (element: Element | null): void => {
     if (!(element instanceof HTMLCanvasElement)) {
       return;
     }
 
-    const context = element.getContext("2d");
-    if (!context) {
-      return;
-    }
-
-    context.fillStyle = "#0b0f19";
-    context.fillRect(0, 0, trackWidth, trackHeight);
-
-    const laneHeight = Math.max(1, Math.floor(trackHeight / laneCount));
-    for (let laneIndex = 0; laneIndex < laneCount; laneIndex += 1) {
-      const y = laneIndex * laneHeight;
-      context.fillStyle = laneIndex % 2 === 0 ? "#253140" : "#1a2431";
-      context.fillRect(0, y, trackWidth, laneHeight);
-      context.strokeStyle = "#3f5268";
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(0, y);
-      context.lineTo(trackWidth, y);
-      context.stroke();
-    }
-
-    const finishX = trackWidth - gameConfig.track.finishLineOffset;
-    context.fillStyle = "#f0f5ff";
-    context.fillRect(finishX, 0, 8, trackHeight);
+    renderEmptyTrack(element);
   };
 };
 
@@ -76,11 +56,7 @@ export const CountdownOverlay: Story = {
       setup() {
         return {
           ...args,
-          onBindCanvas: createCanvasBinder({
-            laneCount: gameConfig.raceHorseCount,
-            trackWidth: args.trackWidth,
-            trackHeight: args.trackHeight,
-          }),
+          onBindCanvas: createCanvasBinder(),
         };
       },
       template:
