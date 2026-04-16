@@ -12,3 +12,4 @@ pnpm-debug.log*
 *.local
 .vscode/
 .idea/
+.local-snapshots/
