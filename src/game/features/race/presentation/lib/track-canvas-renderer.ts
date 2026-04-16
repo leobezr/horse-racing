@@ -199,9 +199,9 @@ const drawLivePodiumLaneBackground = ({
   context.globalAlpha = 0.38
   context.fillStyle = podiumColor
   context.fillRect(
-    gameConfig.track.lanePaddingX,
+    0,
     lane.y + 1,
-    gameConfig.track.width - gameConfig.track.lanePaddingX * 2,
+    gameConfig.track.width,
     Math.max(1, lane.height - 2),
   )
   context.restore()
@@ -237,34 +237,36 @@ const drawTrackBackground = (context: CanvasRenderingContext2D): void => {
   context.fillStyle = colorTokens.track.base
   context.fillRect(0, 0, gameConfig.track.width, gameConfig.track.height)
 
-  context.fillStyle = colorTokens.track.lane
-  context.fillRect(
-    gameConfig.track.lanePaddingX,
-    gameConfig.track.laneStartY - 10,
-    gameConfig.track.width - gameConfig.track.lanePaddingX * 2,
-    gameConfig.track.height - gameConfig.track.laneStartY,
+  context.strokeStyle = colorTokens.track.line
+  context.lineWidth = 1
+
+  const laneHeight = Math.max(
+    1,
+    Math.floor((gameConfig.track.height - gameConfig.track.laneStartY - 15) / gameConfig.raceHorseCount),
   )
 
-  context.strokeStyle = colorTokens.track.line
-  context.lineWidth = 2
+  for (let index = 0; index < gameConfig.raceHorseCount; index += 1) {
+    const y = gameConfig.track.laneStartY + laneHeight * index
+    const laneFillColor = index % 2 === 0 ? colorTokens.track.lane : colorTokens.track.laneAlternate
+    context.fillStyle = laneFillColor
+    context.fillRect(0, y, gameConfig.track.width, laneHeight)
+  }
 
-  const laneHeight = Math.floor((gameConfig.track.height - gameConfig.track.laneStartY - 15) / gameConfig.raceHorseCount)
-  
   for (let index = 0; index <= gameConfig.raceHorseCount; index += 1) {
     const y = gameConfig.track.laneStartY + laneHeight * index
     context.beginPath()
-    context.moveTo(gameConfig.track.lanePaddingX, y)
-    context.lineTo(gameConfig.track.width - gameConfig.track.lanePaddingX, y)
+    context.moveTo(0, y)
+    context.lineTo(gameConfig.track.width, y)
     context.stroke()
   }
 
   context.fillStyle = colorTokens.track.finish
-  context.fillRect(finishX, gameConfig.track.laneStartY - 20, 7, gameConfig.track.height)
+  context.fillRect(finishX, 0, 8, gameConfig.track.height)
 }
 
 const getFinishLineX = (): number => {return gameConfig.track.width - gameConfig.track.finishLineOffset}
 
-const getTrackDrawableDistance = (): number => {return Math.max(1, getFinishLineX() - gameConfig.track.lanePaddingX)}
+const getTrackDrawableDistance = (): number => {return Math.max(1, getFinishLineX())}
 
 const toCanvasDistance = ({
   raceDistance,
@@ -351,12 +353,15 @@ const getHorseRenderPosition = ({
   y: number
   laneCenterY: number
 } => {
-  const maxVisibleHorseX = Math.max(gameConfig.track.lanePaddingX, finishX - frameVisibleBounds.width)
-  const visibleHorseX = Math.min(maxVisibleHorseX, gameConfig.track.lanePaddingX + clampedCanvasDistance)
+  const maxVisibleHorseX = Math.max(0, finishX)
+  const visibleHorseX = Math.min(maxVisibleHorseX, clampedCanvasDistance)
+  const alignmentBoxWidth = Math.min(gameConfig.track.horseAlignmentBoxSize, frameVisibleBounds.width)
   const alignmentBoxHeight = Math.min(gameConfig.track.horseAlignmentBoxSize, frameVisibleBounds.height)
+  const alignmentLeft = frameVisibleBounds.left + frameVisibleBounds.width - alignmentBoxWidth
   const alignmentTop = frameVisibleBounds.top + frameVisibleBounds.height - alignmentBoxHeight
+  const alignmentCenterX = alignmentLeft + alignmentBoxWidth / 2
   const alignmentCenterY = alignmentTop + alignmentBoxHeight / 2
-  const x = Math.round(visibleHorseX - frameVisibleBounds.left)
+  const x = Math.round(visibleHorseX - alignmentCenterX)
   const laneCenterY = lane.y + Math.floor(lane.height / 2)
   const y = Math.round(laneCenterY - alignmentCenterY)
 
@@ -387,8 +392,10 @@ const drawLaneNumber = ({
   }
 
   context.font = '12px Trebuchet MS'
+  context.textBaseline = 'middle'
   const laneLabel = isBetHorse ? `>> ${laneNumber}` : String(laneNumber)
-  context.fillText(laneLabel, gameConfig.track.lanePaddingX - 46, laneCenterY + 4)
+  context.fillText(laneLabel, 10, laneCenterY)
+  context.textBaseline = 'alphabetic'
 }
 
 type TrackRendererDependencies = {
