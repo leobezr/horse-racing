@@ -300,7 +300,11 @@
 
   &__round-row {
     &[data-selected='true'] {
-      background: rgba(255, 97, 38, 0.1);
+      background: linear-gradient(0deg, #e92e2f 0%, #ff6126 100%);
+
+      .game__round-cell {
+        color: #ffffff;
+      }
     }
   }
 

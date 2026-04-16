@@ -172,31 +172,25 @@
                       class="game__round-heading"
                       data-test="app-race-live-head"
                     >
-                      Horse
-                    </th>
-                    <th
-                      class="game__round-heading"
-                      data-test="app-race-live-head"
-                    >
                       Lane
                     </th>
                     <th
                       class="game__round-heading"
                       data-test="app-race-live-head"
                     >
-                      Distance
+                      Name
                     </th>
                     <th
                       class="game__round-heading"
                       data-test="app-race-live-head"
                     >
-                      To Finish
+                      Position
                     </th>
                     <th
                       class="game__round-heading"
                       data-test="app-race-live-head"
                     >
-                      ETA
+                      Race Time
                     </th>
                   </tr>
                 </thead>
@@ -205,27 +199,20 @@
                     v-for="horse in liveHorseProgress"
                     :key="`live-${horse.id}`"
                     class="game__round-row"
-                    :data-selected="String(horse.id === selectedHorseId)"
+                    :data-selected="String(selectedHorseIds.includes(horse.id))"
                     data-test="app-race-live-row"
                   >
-                    <td class="game__round-cell" data-test="app-race-live-cell">
-                      {{ horse.name }}
-                    </td>
                     <td class="game__round-cell" data-test="app-race-live-cell">
                       {{ horse.laneNumber }}
                     </td>
                     <td class="game__round-cell" data-test="app-race-live-cell">
-                      {{ horse.distance.toFixed(1) }}
+                      {{ horse.name }}
                     </td>
                     <td class="game__round-cell" data-test="app-race-live-cell">
-                      {{ horse.distanceToFinish.toFixed(1) }}
+                      {{ horse.position }}
                     </td>
                     <td class="game__round-cell" data-test="app-race-live-cell">
-                      {{
-                        horse.estimatedSecondsToFinish === null
-                          ? "Finished"
-                          : `${horse.estimatedSecondsToFinish.toFixed(2)}s`
-                      }}
+                      {{ `${horse.raceTimeSeconds.toFixed(2)}s` }}
                     </td>
                   </tr>
                 </tbody>
@@ -239,7 +226,8 @@
               data-test="app-race-round-card"
             >
               <h4 class="game__round-title" data-test="app-race-round-title">
-                Round {{ round.roundNumber }}
+                Round {{ round.roundNumber }} -
+                {{ resolveRoundTrackSize(round.roundNumber) }} meters
               </h4>
 
               <v-table
@@ -253,54 +241,36 @@
                       class="game__round-heading"
                       data-test="app-race-round-head"
                     >
-                      Horse
-                    </th>
-                    <th
-                      class="game__round-heading"
-                      data-test="app-race-round-head"
-                    >
                       Lane
                     </th>
                     <th
                       class="game__round-heading"
                       data-test="app-race-round-head"
                     >
-                      Round Dist
+                      Name
                     </th>
                     <th
                       class="game__round-heading"
                       data-test="app-race-round-head"
                     >
-                      Total Dist
+                      Position
                     </th>
                     <th
                       class="game__round-heading"
                       data-test="app-race-round-head"
                     >
-                      Avg Speed
-                    </th>
-                    <th
-                      class="game__round-heading"
-                      data-test="app-race-round-head"
-                    >
-                      Sprints
+                      Race Time
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
-                    v-for="horse in round.horseResults"
+                    v-for="(horse, index) in round.horseResults"
                     :key="`round-${round.roundNumber}-${horse.id}`"
                     class="game__round-row"
-                    :data-selected="String(horse.id === selectedHorseId)"
+                    :data-selected="String(isHorseSelectedForRound(round.roundNumber, horse.id))"
                     data-test="app-race-round-row"
                   >
-                    <td
-                      class="game__round-cell"
-                      data-test="app-race-round-cell"
-                    >
-                      {{ horse.name }}
-                    </td>
                     <td
                       class="game__round-cell"
                       data-test="app-race-round-cell"
@@ -311,25 +281,19 @@
                       class="game__round-cell"
                       data-test="app-race-round-cell"
                     >
-                      {{ horse.roundDistance.toFixed(1) }}
+                      {{ horse.name }}
                     </td>
                     <td
                       class="game__round-cell"
                       data-test="app-race-round-cell"
                     >
-                      {{ horse.totalDistance.toFixed(1) }}
+                      {{ index + 1 }}
                     </td>
                     <td
                       class="game__round-cell"
                       data-test="app-race-round-cell"
                     >
-                      {{ horse.averageTickSpeed.toFixed(2) }}
-                    </td>
-                    <td
-                      class="game__round-cell"
-                      data-test="app-race-round-cell"
-                    >
-                      {{ horse.sprintCount }}/3
+                      {{ formatRoundRaceTime(horse.finishedAtTick) }}
                     </td>
                   </tr>
                 </tbody>
@@ -588,6 +552,7 @@ const {
   gameConfig,
   renderSheets,
   raceRoundSummaries,
+  roundBetHorseIdsByRound,
   liveRaceRound,
   liveHorseProgress,
   isAwaitingBetweenRoundsBet,
@@ -635,6 +600,36 @@ const pendingHorsePreview = computed<HorseOption | null>(() => {
     }) ?? null
   );
 });
+
+const resolveRoundTrackSize = (roundNumber: number): number => {
+  return (
+    gameConfig.rounds.trackDistances[roundNumber - 1] ??
+    gameConfig.rounds.trackDistances[gameConfig.rounds.trackDistances.length - 1] ??
+    0
+  );
+};
+
+const formatRoundRaceTime = (finishedAtTick: number | null): string => {
+  if (finishedAtTick === null || finishedAtTick >= gameConfig.simulation.maxTicks) {
+    return "DNF";
+  }
+
+  const normalizedTick = Math.max(0, finishedAtTick);
+  const raceTimeSeconds = Number.parseFloat(
+    (((normalizedTick + 1) * gameConfig.animation.tickMs) / 1000).toFixed(2),
+  );
+
+  return `${raceTimeSeconds.toFixed(2)}s`;
+};
+
+const isHorseSelectedForRound = (
+  roundNumber: number,
+  horseId: string,
+): boolean => {
+  const selectedIdsForRound =
+    roundBetHorseIdsByRound.value[roundNumber] ?? selectedHorseIds.value;
+  return selectedIdsForRound.includes(horseId);
+};
 
 const isSetupHorseDisabled = (horseId: string): boolean => {
   if (pendingRaceHorseIds.value.includes(horseId)) {
