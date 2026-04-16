@@ -1,6 +1,9 @@
 node_modules/
 dist/
 coverage/
+test-results/
+storybook-static/
+playwright-report/
 .DS_Store
 .env
 .env.*
