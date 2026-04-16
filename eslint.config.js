@@ -66,4 +66,25 @@ export default [
       'max-lines-per-function': 'off',
     },
   },
+  {
+    files: ['cypress/**/*.ts', 'cypress.config.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        Cypress: 'readonly',
+        cy: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        before: 'readonly',
+        beforeEach: 'readonly',
+        after: 'readonly',
+        afterEach: 'readonly',
+        expect: 'readonly',
+        assert: 'readonly',
+      },
+    },
+    rules: {
+      'max-lines-per-function': 'off',
+    },
+  },
 ]
