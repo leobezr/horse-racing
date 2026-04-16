@@ -12,14 +12,19 @@
 - Generate/verify Storybook visual snapshots locally: `yarn test:storybook:snapshots`
 - In CI with GitHub Pages preview, point tests at deployed Storybook by setting `BASE_URL`:
   `BASE_URL=https://<org>.github.io/<repo>/ yarn test:storybook:snapshots`
+- Update local-only snapshots (outside repo snapshots):
+  `yarn test:storybook:snapshots:update:local`
+- Verify deployed GitHub Pages build against local snapshots:
+  `yarn test:storybook:snapshots:deployed-vs-local`
 
 ## GitHub Pages pipeline (Storybook)
 
 - Workflow: `.github/workflows/storybook-pages.yml`
-- Trigger: push to `main` (or manual dispatch)
+- Trigger: push to `master` (or manual dispatch)
 - Output URL format:
   `https://<github-username-or-org>.github.io/<repo-name>/`
-- Snapshot pipeline uses this Pages URL automatically in:
+- Snapshot verification runs after successful Pages deployment and compares
+  deployed output with local snapshot baselines in:
   `.github/workflows/storybook-snapshots.yml`
 
 ### Docker workflow

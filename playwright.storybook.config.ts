@@ -1,9 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const useRemoteBaseUrl = Boolean(process.env.BASE_URL);
+const localSnapshotsDir = process.env.PLAYWRIGHT_SNAPSHOTS_OUTPUT_DIR;
 
 export default defineConfig({
   testDir: "tests/storybook",
+  snapshotPathTemplate: localSnapshotsDir
+    ? `${localSnapshotsDir}/{testFilePath}/{arg}{ext}`
+    : undefined,
   timeout: 30000,
   expect: {
     timeout: 5000,

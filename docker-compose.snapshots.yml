@@ -9,4 +9,4 @@ services:
       - BASE_URL=
     volumes:
       - ./:/workspace
-    command: ["yarn", "test:storybook:snapshots", "--update-snapshots"]
+    command: ["yarn", "test:storybook:snapshots:update:local"]
