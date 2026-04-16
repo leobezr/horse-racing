@@ -10,7 +10,7 @@ import { watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRaceReplayStore } from '../../../../shared/pinia/race-replay-store'
 import type { ReplayQuery } from '../types/replay-query'
-import { HorseRaceCanvas } from '../components/HorseRace'
+import { HorseRaceCanvas } from './HorseRace'
 
 const route = useRoute()
 const raceReplayStore = useRaceReplayStore()

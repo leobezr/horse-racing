@@ -139,7 +139,7 @@
     font-weight: 600;
   }
 
-  :global(.game__button.v-btn) {
+  &__button.v-btn {
     background: linear-gradient(0deg, #e92e2f 0%, #ff6126 100%) !important;
     color: #ffffff !important;
   }
@@ -452,12 +452,12 @@
   }
 }
 
-:global(.game__modal-backdrop .v-overlay__scrim) {
+.game__modal-backdrop .v-overlay__scrim {
   background: rgba(10, 10, 10, 0.6);
   animation: game-modal-fade-in var(--app-modal-transition-ms, 220ms) var(--app-easing-standard, ease) both;
 }
 
-:global(.game .v-btn.game__horse-card) {
+.game .v-btn.game__horse-card {
   text-transform: none;
   letter-spacing: 0;
   min-height: 0;
@@ -465,18 +465,18 @@
   box-shadow: none;
 }
 
-:global(.game .v-btn.game__button) {
+.game .v-btn.game__button {
   text-transform: none;
   letter-spacing: 0;
 }
 
-:global(.game .v-btn.game__modal-close) {
+.game .v-btn.game__modal-close {
   text-transform: none;
   letter-spacing: 0;
   border: 1px solid rgba(255, 97, 38, 0.3);
 }
 
-:global(.game .v-field) {
+.game .v-field {
   background: rgba(19, 13, 31, 0.95);
 }
 
