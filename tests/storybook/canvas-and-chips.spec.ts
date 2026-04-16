@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+const cacheBustToken = process.env.STORYBOOK_CACHE_BUST ?? `${Date.now()}`;
+
 const openStory = async ({
   page,
   storyId,
@@ -7,7 +9,7 @@ const openStory = async ({
   page: Parameters<typeof test>[0]["page"];
   storyId: string;
 }): Promise<void> => {
-  await page.goto(`/iframe.html?id=${storyId}&viewMode=story`);
+  await page.goto(`iframe.html?id=${storyId}&viewMode=story&cacheBust=${cacheBustToken}`);
   await page.waitForLoadState("domcontentloaded");
 };
 

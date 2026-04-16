@@ -34,6 +34,7 @@ jobs:
       - name: Verify deployed Storybook against local snapshots
         env:
           BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/storybook/
+          STORYBOOK_CACHE_BUST: ${{ github.event.workflow_run.head_sha }}
         run: yarn test:storybook:snapshots:deployed-vs-local
 
       - name: Upload Playwright report

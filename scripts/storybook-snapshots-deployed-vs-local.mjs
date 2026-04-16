@@ -43,6 +43,7 @@ const env = {
   ...process.env,
   BASE_URL: baseUrl,
   PLAYWRIGHT_SNAPSHOTS_OUTPUT_DIR: ".local-snapshots",
+  STORYBOOK_CACHE_BUST: process.env.STORYBOOK_CACHE_BUST ?? Date.now().toString(),
 };
 
 run("yarn", ["test:storybook:snapshots"], env);
