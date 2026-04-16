@@ -1,6 +1,8 @@
-name: Storybook Pages
+name: App Pages
 
 on:
+  push:
+    branches: ["master"]
   workflow_dispatch:
 
 permissions:
@@ -9,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "storybook-pages"
+  group: "app-pages"
   cancel-in-progress: true
 
 jobs:
@@ -31,15 +33,26 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build app for GitHub Pages
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+        run: yarn build
+
       - name: Build Storybook for GitHub Pages
         env:
-          STORYBOOK_BASE_PATH: /${{ github.event.repository.name }}/
+          STORYBOOK_BASE_PATH: /${{ github.event.repository.name }}/storybook/
         run: yarn storybook:build
+
+      - name: Merge Storybook into app artifact
+        run: mkdir -p dist/storybook && cp -R storybook-static/* dist/storybook/
+
+      - name: Configure SPA fallback
+        run: cp dist/index.html dist/404.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: storybook-static
+          path: dist
 
   deploy:
     needs: build

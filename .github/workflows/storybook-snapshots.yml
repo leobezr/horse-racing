@@ -2,7 +2,7 @@ name: Storybook Snapshots Verification
 
 on:
   workflow_run:
-    workflows: ["Storybook Pages"]
+    workflows: ["App Pages"]
     types: ["completed"]
 
 permissions:
@@ -33,7 +33,7 @@ jobs:
 
       - name: Verify deployed Storybook against local snapshots
         env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
+          BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/storybook/
         run: yarn test:storybook:snapshots:deployed-vs-local
 
       - name: Upload Playwright report

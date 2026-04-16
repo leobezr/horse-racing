@@ -17,15 +17,21 @@
 - Verify deployed GitHub Pages build against local snapshots:
   `yarn test:storybook:snapshots:deployed-vs-local`
 
-## GitHub Pages pipeline (Storybook)
+## GitHub Pages pipeline (App + Storybook)
 
-- Workflow: `.github/workflows/storybook-pages.yml`
+- Primary workflow: `.github/workflows/app-pages.yml`
 - Trigger: push to `master` (or manual dispatch)
-- Output URL format:
+- App URL format:
   `https://<github-username-or-org>.github.io/<repo-name>/`
-- Snapshot verification runs after successful Pages deployment and compares
-  deployed output with local snapshot baselines in:
+- Storybook URL format:
+  `https://<github-username-or-org>.github.io/<repo-name>/storybook/`
+- Snapshot verification runs after successful `App Pages` deployment and compares
+  deployed Storybook output with local snapshot baselines in:
   `.github/workflows/storybook-snapshots.yml`
+
+### Optional Storybook-only deploy
+
+- Manual-only workflow: `.github/workflows/storybook-pages.yml`
 
 ### Docker workflow
 
