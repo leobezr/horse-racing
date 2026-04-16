@@ -40,6 +40,7 @@ export type RoundHorseResult = {
   laneNumber: number
   roundDistance: number
   totalDistance: number
+  finishedAtTick: number | null
   averageTickSpeed: number
   sprintCount: number
 }
@@ -56,6 +57,8 @@ export type LiveHorseProgress = {
   id: string
   name: string
   laneNumber: number
+  position: number
+  raceTimeSeconds: number
   distance: number
   distanceToFinish: number
   estimatedSecondsToFinish: number | null
