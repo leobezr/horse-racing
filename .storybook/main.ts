@@ -3,6 +3,23 @@ import { mergeConfig } from "vite";
 import vuetify from "vite-plugin-vuetify";
 import type { StorybookConfig } from "@storybook/vue3-vite";
 
+const resolveStorybookBasePath = (): string | undefined => {
+  const rawBasePath = process.env.STORYBOOK_BASE_PATH;
+  if (!rawBasePath) {
+    return undefined;
+  }
+
+  const withLeadingSlash = rawBasePath.startsWith("/")
+    ? rawBasePath
+    : `/${rawBasePath}`;
+
+  if (withLeadingSlash.endsWith("/")) {
+    return withLeadingSlash;
+  }
+
+  return `${withLeadingSlash}/`;
+};
+
 const config: StorybookConfig = {
   stories: ["../src/**/*.stories.@(ts|tsx|js|jsx|mjs)"],
   addons: [
@@ -18,7 +35,10 @@ const config: StorybookConfig = {
     autodocs: "tag",
   },
   viteFinal: async (viteConfig) => {
+    const basePath = resolveStorybookBasePath();
+
     return mergeConfig(viteConfig, {
+      base: basePath,
       plugins: [
         vuetify({
           autoImport: true,
