@@ -50,12 +50,10 @@ const pickRaceHorses = ({
   previousRaceHorseIds?: string[]
   rng: DeterministicRng
 }): HorseOption[] => {
-  const selectedHorseIdsInput =
-    selectedHorseIds && selectedHorseIds.length > 0
-      ? selectedHorseIds
-      : selectedHorseId
-        ? [selectedHorseId]
-        : []
+  const selectedHorseIdsInput = resolveSelectedHorseIdsInput({
+    selectedHorseId,
+    selectedHorseIds,
+  })
 
   const preselectedHorses = selectedHorseIdsInput.map((selectedId) => {
     return horses.find((horse) => {return horse.id === selectedId})
@@ -67,10 +65,9 @@ const pickRaceHorses = ({
     return []
   }
 
-  const availableHorses = horses.filter((horse) => {
-    return !preselectedHorses.some((selectedHorse) => {
-      return selectedHorse.id === horse.id
-    })
+  const availableHorses = resolveAvailableHorses({
+    horses,
+    preselectedHorses,
   })
   const previousHorseIdSet = new Set(previousRaceHorseIds ?? [])
   const nonPreviousHorses = availableHorses.filter((horse) => {
@@ -102,11 +99,101 @@ const pickRaceHorses = ({
   return [...preselectedHorses, ...nonPreviousPicked, ...fallbackPicked]
 }
 
-const assignRaceLanes = (horses: HorseOption[]): HorseOption[] =>
-  {return horses.map((horse, index) => {return {
-    ...horse,
-    laneNumber: index + 1,
-  }})}
+const resolveSelectedHorseIdsInput = ({
+  selectedHorseId,
+  selectedHorseIds,
+}: {
+  selectedHorseId?: string
+  selectedHorseIds?: string[]
+}): string[] => {
+  if (selectedHorseIds && selectedHorseIds.length > 0) {
+    return selectedHorseIds
+  }
+
+  if (selectedHorseId) {
+    return [selectedHorseId]
+  }
+
+  return []
+}
+
+const resolveAvailableHorses = ({
+  horses,
+  preselectedHorses,
+}: {
+  horses: HorseOption[]
+  preselectedHorses: HorseOption[]
+}): HorseOption[] => {
+  return horses.filter((horse) => {
+    return !preselectedHorses.some((selectedHorse) => {
+      return selectedHorse.id === horse.id
+    })
+  })
+}
+
+const resolveHorsePool = ({
+  horsePool,
+  rng,
+}: {
+  horsePool?: HorseOption[]
+  rng: DeterministicRng
+}): HorseOption[] => {
+  if (horsePool && horsePool.length > 0) {
+    return horsePool
+  }
+
+  return createHorseOptions(rng)
+}
+
+const applyRaceMetadataToHorses = ({
+  horses,
+  race,
+  resolvedSelectedId,
+}: {
+  horses: HorseOption[]
+  race: RaceSession['race']
+  resolvedSelectedId: string
+}): void => {
+  for (const horse of horses) {
+    horse.metadata.selectedByUser = horse.id === resolvedSelectedId
+    const raceMetadata = race.metadataByHorseId[horse.id]
+    horse.metadata.raceTicksCompleted = raceMetadata.raceTicksCompleted
+    horse.metadata.finalDistance = raceMetadata.finalDistance
+    horse.metadata.finishedAtTick = raceMetadata.finishedAtTick
+    horse.metadata.sprintCount = raceMetadata.sprintCount
+    horse.metadata.averageTickSpeed = raceMetadata.averageTickSpeed
+  }
+}
+
+const resolveSelectedHorseId = ({
+  horses,
+  selectedHorseId,
+  selectedHorseIds,
+}: {
+  horses: HorseOption[]
+  selectedHorseId?: string
+  selectedHorseIds?: string[]
+}): string => {
+  const selectedId = selectedHorseIds?.[0] ?? selectedHorseId ?? horses[0]?.id ?? ''
+  const selectedHorseExists = horses.some((horse) => {
+    return horse.id === selectedId
+  })
+
+  if (selectedHorseExists) {
+    return selectedId
+  }
+
+  return horses[0].id
+}
+
+const assignRaceLanes = (horses: HorseOption[]): HorseOption[] => {
+  return horses.map((horse, index) => {
+    return {
+      ...horse,
+      laneNumber: index + 1,
+    }
+  })
+}
 
 export const createRaceSession = async ({
   seedInput,
@@ -122,7 +209,7 @@ export const createRaceSession = async ({
   previousRaceHorseIds?: string[]
 }): Promise<RaceSession> => {
   const rng = createDeterministicRng(resolveSessionSeedInput(seedInput))
-  const resolvedHorsePool = horsePool && horsePool.length > 0 ? horsePool : createHorseOptions(rng)
+  const resolvedHorsePool = resolveHorsePool({ horsePool, rng })
   const horses = assignRaceLanes(pickRaceHorses({
     horses: resolvedHorsePool,
     selectedHorseId,
@@ -130,28 +217,23 @@ export const createRaceSession = async ({
     previousRaceHorseIds,
     rng,
   }))
-  const selectedId = selectedHorseIds?.[0] ?? selectedHorseId ?? horses[0]?.id ?? ''
 
   if (horses.length === 0) {
     throw new Error('No race horses available to start session.')
   }
 
-  const selectedHorseExists = horses.some((horse) => {return horse.id === selectedId})
-  const resolvedSelectedId = selectedHorseExists ? selectedId : horses[0].id
-
-  for (const horse of horses) {
-    horse.metadata.selectedByUser = horse.id === resolvedSelectedId
-  }
+  const resolvedSelectedId = resolveSelectedHorseId({
+    horses,
+    selectedHorseId,
+    selectedHorseIds,
+  })
 
   const race = runDeterministicRace({ horses, rng })
-  for (const horse of horses) {
-    const raceMetadata = race.metadataByHorseId[horse.id]
-    horse.metadata.raceTicksCompleted = raceMetadata.raceTicksCompleted
-    horse.metadata.finalDistance = raceMetadata.finalDistance
-    horse.metadata.finishedAtTick = raceMetadata.finishedAtTick
-    horse.metadata.sprintCount = raceMetadata.sprintCount
-    horse.metadata.averageTickSpeed = raceMetadata.averageTickSpeed
-  }
+  applyRaceMetadataToHorses({
+    horses,
+    race,
+    resolvedSelectedId,
+  })
 
   const lanes = createTrackLanes()
   const loadedFramePairs = await loadHorseFrameAssets()
