@@ -57,7 +57,7 @@ const getStatusMessageBeforeSession = ({
   }
 
   if (selectedHorseIds.length === 0) {
-    return "Click New Race and pick a horse to bet on.";
+    return "Click Generate Race Schedule and pick a horse to bet on.";
   }
 
   const totalStake = getRoundBetTotalStake({
@@ -69,7 +69,7 @@ const getStatusMessageBeforeSession = ({
     return `Not enough credit for this chip. Available: ${availableCredit}.`;
   }
 
-  return "Ready to start. Click New Race.";
+  return "Ready to start. Click Generate Race Schedule.";
 };
 
 const getStatusMessageDuringSession = ({

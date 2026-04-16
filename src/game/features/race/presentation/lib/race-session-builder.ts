@@ -56,6 +56,45 @@ const getSelectedHorseForRace = ({
   );
 };
 
+const buildRaceSession = async (
+  input: BuildRaceSessionInput,
+): Promise<BuildRaceSessionOutput | null> => {
+  const selectedHorseIdsInput = getSelectedHorseIdsInput(input)
+  const selectedHorseInput = getSelectedHorseInput(input);
+  if (selectedHorseInput === null || selectedHorseIdsInput.length === 0) {
+    return null;
+  }
+
+  if (!canBuildRaceSession(input)) {
+    return null;
+  }
+
+  const replayRequest = input.consumeReplayRequest();
+  const currentSeed = replayRequest?.seedText ?? input.poolSeed;
+  const selectedHorseForRace = getSelectedHorseForRace({
+    input,
+    selectedHorseIdsInput,
+    replaySelectedHorseId: replayRequest?.selectedHorseId,
+  });
+
+  if (!selectedHorseForRace) {
+    return null;
+  }
+
+  const nextSession = await createRaceSession({
+    seedInput: currentSeed,
+    selectedHorseId: selectedHorseForRace,
+    selectedHorseIds: selectedHorseIdsInput,
+    horsePool: input.horsePool,
+    previousRaceHorseIds: input.previousRaceHorseIds,
+  });
+
+  return {
+    selectedHorseId: nextSession.selectedHorseId,
+    raceSession: nextSession,
+  };
+};
+
 /**
  * Creates an adapter that builds race sessions and records resulting bet history.
  *
@@ -67,45 +106,6 @@ export const createRaceSessionBuilder = (): {
     input: BuildRaceSessionInput,
   ) => Promise<BuildRaceSessionOutput | null>;
 } => {
-  const buildRaceSession = async (
-    input: BuildRaceSessionInput,
-  ): Promise<BuildRaceSessionOutput | null> => {
-    const selectedHorseIdsInput = getSelectedHorseIdsInput(input)
-    const selectedHorseInput = getSelectedHorseInput(input);
-    if (selectedHorseInput === null || selectedHorseIdsInput.length === 0) {
-      return null;
-    }
-
-    if (!canBuildRaceSession(input)) {
-      return null;
-    }
-
-    const replayRequest = input.consumeReplayRequest();
-    const currentSeed = replayRequest?.seedText ?? input.poolSeed;
-    const selectedHorseForRace = getSelectedHorseForRace({
-      input,
-      selectedHorseIdsInput,
-      replaySelectedHorseId: replayRequest?.selectedHorseId,
-    });
-
-    if (!selectedHorseForRace) {
-      return null;
-    }
-
-    const nextSession = await createRaceSession({
-      seedInput: currentSeed,
-      selectedHorseId: selectedHorseForRace,
-      selectedHorseIds: selectedHorseIdsInput,
-      horsePool: input.horsePool,
-      previousRaceHorseIds: input.previousRaceHorseIds,
-    });
-
-    return {
-      selectedHorseId: nextSession.selectedHorseId,
-      raceSession: nextSession,
-    };
-  };
-
   return {
     buildRaceSession,
   };
