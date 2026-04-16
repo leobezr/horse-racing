@@ -148,3 +148,17 @@ If rules conflict, resolve in this order:
 - `Component` files must implement one feature concern only (single responsibility).
 - Keep business/domain logic out of Vue components; use application/domain services for behavior.
 - Prefer naming that makes role explicit (example: `RaceBoardOrchestrator.vue`, `RaceBoardTableComponent.vue`).
+
+## 20) Atomic Design policy for Vue components
+
+- Vue UI components under `src/app` must follow Atomic Design levels: `atoms`, `molecules`, `organisms`, `templates`, `pages`.
+- Each Vue component must belong to exactly one atomic level; mixing multiple level responsibilities in one component is forbidden.
+- Dependency direction is strictly bottom-up: `atoms -> molecules -> organisms -> templates -> pages`.
+- Lower levels must never import higher levels (example: an atom must not import a molecule).
+- `Atom` components are primitive, reusable UI elements with no feature/domain behavior, no async fetching, and no store access.
+- `Molecule` components compose atoms into small interactive units while staying feature-light and presentation-focused.
+- `Organism` components compose molecules/atoms into feature sections and may consume prepared view models only.
+- `Template` components define page structure/layout and slot contracts; they must not implement domain decisions.
+- `Page` components are route-level composition boundaries that bind real data to templates and delegate behavior to application services/stores.
+- Existing `Orchestrator` role maps to composition-heavy `template/page` concerns; existing `Component` role maps to `atom/molecule/organism` concerns.
+- Folder and naming must make atomic level explicit to avoid ambiguous placement (example: `presentation/components/atoms/ButtonAtom.vue`).

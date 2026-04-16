@@ -29,6 +29,11 @@ Use this checklist before finalizing any task.
 - [ ] Vue component role is explicit: `Orchestrator` or `Component`.
 - [ ] Orchestrator component only composes/glues existing components.
 - [ ] Each component has one feature concern (SOLID/SRP).
+- [ ] Vue components are assigned to a single Atomic Design level (`atom`, `molecule`, `organism`, `template`, `page`).
+- [ ] Atomic dependency direction is respected (`atoms -> molecules -> organisms -> templates -> pages`).
+- [ ] Lower Atomic levels do not import higher levels.
+- [ ] `Atom` components remain behavior-light (no store access, no async/domain logic).
+- [ ] `Template` and `Page` components stay composition-focused and delegate behavior to application services/stores.
 
 ## Code quality
 
