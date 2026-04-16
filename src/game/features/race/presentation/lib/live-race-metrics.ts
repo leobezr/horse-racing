@@ -12,14 +12,52 @@ import type {
  */
 export const createLiveRaceRound = ({
   tickIndex,
+  roundSummaries,
+}: {
+  tickIndex: number
+  roundSummaries: RaceRoundSummary[]
+}): LiveRaceRound => {
+  const activeRoundSummary = roundSummaries.find((roundSummary) => {
+    return tickIndex >= roundSummary.startTick && tickIndex <= roundSummary.endTick
+  })
+
+  if (!activeRoundSummary) {
+    return createFallbackLiveRaceRound({ tickIndex })
+  }
+
+  const roundTickProgress = Math.max(0, tickIndex - activeRoundSummary.startTick)
+  const roundTickCount = Math.max(
+    1,
+    activeRoundSummary.endTick - activeRoundSummary.startTick + 1,
+  )
+  const roundTicksRemaining = Math.max(0, roundTickCount - roundTickProgress)
+  const roundSecondsRemaining = Math.max(0, Math.ceil((roundTicksRemaining * gameConfig.animation.tickMs) / 1000))
+
+  return {
+    roundNumber: activeRoundSummary.roundNumber,
+    roundSecondsRemaining,
+  }
+}
+
+const createFallbackLiveRaceRound = ({
+  tickIndex,
 }: {
   tickIndex: number
 }): LiveRaceRound => {
-  const ticksPerRound = Math.max(1, Math.floor((gameConfig.rounds.secondsPerRound * 1000) / gameConfig.animation.tickMs))
-  const roundNumber = Math.min(gameConfig.rounds.count, Math.floor(tickIndex / ticksPerRound) + 1)
+  const ticksPerRound = Math.max(
+    1,
+    Math.floor((gameConfig.rounds.secondsPerRound * 1000) / gameConfig.animation.tickMs),
+  )
+  const roundNumber = Math.min(
+    gameConfig.rounds.count,
+    Math.floor(tickIndex / ticksPerRound) + 1,
+  )
   const roundTickProgress = tickIndex % ticksPerRound
   const roundTicksRemaining = Math.max(0, ticksPerRound - roundTickProgress)
-  const roundSecondsRemaining = Math.max(0, Math.ceil((roundTicksRemaining * gameConfig.animation.tickMs) / 1000))
+  const roundSecondsRemaining = Math.max(
+    0,
+    Math.ceil((roundTicksRemaining * gameConfig.animation.tickMs) / 1000),
+  )
 
   return {
     roundNumber,

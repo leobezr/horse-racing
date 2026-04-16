@@ -1,5 +1,5 @@
 import { gameConfig } from '../../../../../config/game.config'
-import { createLiveHorseProgress } from './live-race-metrics'
+import { createLiveHorseProgress, createLiveRaceRound } from './live-race-metrics'
 import type { HorseOption } from '../../types/horse-race'
 
 const createHorse = ({ id, laneNumber }: { id: string; laneNumber: number }): HorseOption => {
@@ -323,5 +323,40 @@ describe('createLiveHorseProgress', () => {
 
     expect(progress[0]?.id).toBe('horse-1')
     expect(progress[1]?.id).toBe('horse-2')
+  })
+})
+
+describe('createLiveRaceRound', () => {
+  it('uses active round summary duration for countdown instead of fixed secondsPerRound', () => {
+    const liveRound = createLiveRaceRound({
+      tickIndex: 10,
+      roundSummaries: [
+        {
+          roundNumber: 1,
+          seedText: 'round-1-seed',
+          startTick: 0,
+          endTick: 20,
+          horseResults: [],
+        },
+      ],
+    })
+
+    expect(liveRound.roundNumber).toBe(1)
+    expect(liveRound.roundSecondsRemaining).toBe(2)
+    expect(liveRound.roundSecondsRemaining).toBeLessThan(gameConfig.rounds.secondsPerRound)
+  })
+
+  it('falls back to configured round timing when active summary is unavailable', () => {
+    const ticksPerRound = Math.max(
+      1,
+      Math.floor((gameConfig.rounds.secondsPerRound * 1000) / gameConfig.animation.tickMs),
+    )
+    const liveRound = createLiveRaceRound({
+      tickIndex: ticksPerRound + 10,
+      roundSummaries: [],
+    })
+
+    expect(liveRound.roundNumber).toBe(2)
+    expect(liveRound.roundSecondsRemaining).toBe(14)
   })
 })

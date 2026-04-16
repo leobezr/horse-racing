@@ -283,7 +283,10 @@ export const useHorseRaceCanvas = ({
     snapshotByHorseId: Map<string, number>;
     raceFinishDistance: number;
   }): void => {
-    liveRaceRound.value = createLiveRaceRound({ tickIndex });
+    liveRaceRound.value = createLiveRaceRound({
+      tickIndex,
+      roundSummaries: session.race.roundSummaries,
+    });
     liveHorseProgress.value = createLiveHorseProgress({
       horses: session.horses,
       snapshotByHorseId,
