@@ -1,5 +1,12 @@
 # horse-racing
 
+## Run locally
+
+- Install dependencies: `yarn`
+- Start app dev server: `yarn dev`
+- Start Storybook: `yarn storybook`
+- Build Storybook static bundle: `yarn storybook:build`
+
 ## Engineering Rule Base
 
 This project enforces a strict rule base in `.opencode`:
