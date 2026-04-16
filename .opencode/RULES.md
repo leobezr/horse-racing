@@ -162,3 +162,17 @@ If rules conflict, resolve in this order:
 - `Page` components are route-level composition boundaries that bind real data to templates and delegate behavior to application services/stores.
 - Existing `Orchestrator` role maps to composition-heavy `template/page` concerns; existing `Component` role maps to `atom/molecule/organism` concerns.
 - Folder and naming must make atomic level explicit to avoid ambiguous placement (example: `presentation/components/atoms/ButtonAtom.vue`).
+
+## 21) Race feature UI refactor architecture decision (ADR)
+
+- The race UI under `src/app/features/race/components/HorseRace` is split by Atomic Design while preserving visual output and interaction behavior.
+- `HorseRaceOrchestrator.vue` remains the composition boundary and must delegate rendering to atomic components rather than embedding large template blocks.
+- Behavior composition helpers for HorseRace must be imported from the `services` path (`components/HorseRace/services/*`) to keep orchestration and reusable behavior decoupled.
+- Refactors in this feature are non-functional by default: no visual/UX or behavior drift is allowed unless explicitly requested.
+- Existing BEM class names and `data-test` selectors are part of the public UI contract and must be preserved during internal restructures.
+
+## 22) Completion gate policy
+
+- Before marking work as done, always execute ESLint and verify it reports zero errors.
+- Default command for this gate: `yarn lint`.
+- If ESLint fails, completion/handoff is blocked until errors are resolved or explicitly scoped out by the user.

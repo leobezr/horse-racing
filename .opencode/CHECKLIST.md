@@ -52,6 +52,7 @@ Use this checklist before finalizing any task.
 - [ ] No npm command usage added to project docs or automation.
 - [ ] Lint passes (`yarn lint`) before completion.
 - [ ] Final verification run (`yarn verify`) before handing off work.
+- [ ] ESLint was run before handoff and reports zero errors.
 
 ## Language and workflow
 
@@ -61,6 +62,11 @@ Use this checklist before finalizing any task.
 - [ ] RED phase existed first (failing test before production change).
 - [ ] REFACTOR phase preserved behavior with tests kept green.
 - [ ] Implementation changes were executed in `developer` context.
+
+## Architecture decisions
+
+- [ ] HorseRace refactors preserve visual/behavior parity unless explicitly requested otherwise.
+- [ ] HorseRace orchestration logic uses service-path helpers under `components/HorseRace/services`.
 
 ## Testing and coverage gates
 
