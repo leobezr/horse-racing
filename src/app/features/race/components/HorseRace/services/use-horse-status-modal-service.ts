@@ -8,6 +8,13 @@ type NumberRef = { value: number };
 type TimerRef = { value: number | null };
 type HorseOptionsRef = Ref<HorseOption[]>;
 type RenderSheetsRef = Ref<Record<string, HTMLCanvasElement[]>>;
+type HorseStatusState = {
+  statusCanvasRef: CanvasRef;
+  activeHorseStatusId: { value: string | null };
+  statusFrameIndex: NumberRef;
+  statusFrameTimerId: TimerRef;
+  statusFrameIntervalMs: number;
+};
 
 const resolveActiveHorseStatus = ({
   horseOptions,
@@ -36,31 +43,86 @@ const drawStatusFrame = ({
   statusFrameIndex: NumberRef;
   frameIndexOverride?: number;
 }): void => {
-  const horse = activeHorseStatus.value;
-  const canvas = statusCanvasRef.value;
-
-  if (!horse || !canvas) {
+  const resolved = resolveStatusDrawData({
+    activeHorseStatus,
+    statusCanvasRef,
+    renderSheets,
+    statusFrameIndex,
+    frameIndexOverride,
+  });
+  if (!resolved) {
     return;
   }
 
-  const context = canvas.getContext("2d");
-  if (!context) {
-    return;
-  }
-
-  const frameSequence = horse.frameSequence.length > 0 ? horse.frameSequence : [0];
-  const frameIndex = frameIndexOverride ?? statusFrameIndex.value;
-  const frameId = frameSequence[frameIndex % frameSequence.length];
-  const frame = renderSheets.value[horse.id]?.[frameId];
-
-  if (!frame) {
-    return;
-  }
-
+  const { canvas, context, frame } = resolved;
   canvas.width = frame.width;
   canvas.height = frame.height;
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(frame, 0, 0);
+};
+
+const resolveStatusDrawData = ({
+  activeHorseStatus,
+  statusCanvasRef,
+  renderSheets,
+  statusFrameIndex,
+  frameIndexOverride,
+}: {
+  activeHorseStatus: HorseStatusRef;
+  statusCanvasRef: CanvasRef;
+  renderSheets: RenderSheetsRef;
+  statusFrameIndex: NumberRef;
+  frameIndexOverride?: number;
+}):
+  | {
+      canvas: HTMLCanvasElement;
+      context: CanvasRenderingContext2D;
+      frame: HTMLCanvasElement;
+    }
+  | null => {
+  const horse = activeHorseStatus.value;
+  const canvas = statusCanvasRef.value;
+  if (!horse || !canvas) {
+    return null;
+  }
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return null;
+  }
+
+  const frame = resolveHorseFrame({
+    horse,
+    renderSheets,
+    statusFrameIndex,
+    frameIndexOverride,
+  });
+  if (!frame) {
+    return null;
+  }
+
+  return {
+    canvas,
+    context,
+    frame,
+  };
+};
+
+const resolveHorseFrame = ({
+  horse,
+  renderSheets,
+  statusFrameIndex,
+  frameIndexOverride,
+}: {
+  horse: HorseOption;
+  renderSheets: RenderSheetsRef;
+  statusFrameIndex: NumberRef;
+  frameIndexOverride?: number;
+}): HTMLCanvasElement | null => {
+  const frameSequence = horse.frameSequence.length > 0 ? horse.frameSequence : [0];
+  const frameIndex = frameIndexOverride ?? statusFrameIndex.value;
+  const frameId = frameSequence[frameIndex % frameSequence.length];
+  return renderSheets.value[horse.id]?.[frameId] ?? null;
 };
 
 const stopStatusAnimation = ({
@@ -91,7 +153,32 @@ const startStatusAnimation = ({
 }): void => {
   stopStatusAnimation({ statusFrameTimerId });
   statusFrameIndex.value = 0;
+  drawStatusFrameAtStart({
+    activeHorseStatus,
+    statusCanvasRef,
+    renderSheets,
+    statusFrameIndex,
+  });
+  statusFrameTimerId.value = createStatusAnimationTimer({
+    statusFrameIndex,
+    activeHorseStatus,
+    statusCanvasRef,
+    renderSheets,
+    statusFrameIntervalMs,
+  });
+};
 
+const drawStatusFrameAtStart = ({
+  activeHorseStatus,
+  statusCanvasRef,
+  renderSheets,
+  statusFrameIndex,
+}: {
+  activeHorseStatus: HorseStatusRef;
+  statusCanvasRef: CanvasRef;
+  renderSheets: RenderSheetsRef;
+  statusFrameIndex: NumberRef;
+}): void => {
   drawStatusFrame({
     activeHorseStatus,
     statusCanvasRef,
@@ -99,8 +186,22 @@ const startStatusAnimation = ({
     statusFrameIndex,
     frameIndexOverride: 0,
   });
+};
 
-  statusFrameTimerId.value = window.setInterval(() => {
+const createStatusAnimationTimer = ({
+  statusFrameIndex,
+  activeHorseStatus,
+  statusCanvasRef,
+  renderSheets,
+  statusFrameIntervalMs,
+}: {
+  statusFrameIndex: NumberRef;
+  activeHorseStatus: HorseStatusRef;
+  statusCanvasRef: CanvasRef;
+  renderSheets: RenderSheetsRef;
+  statusFrameIntervalMs: number;
+}): number => {
+  return window.setInterval(() => {
     statusFrameIndex.value += 1;
     drawStatusFrame({
       activeHorseStatus,
@@ -174,32 +275,28 @@ export const useHorseStatusModalService = ({
   horseOptions: HorseOptionsRef;
   renderSheets: RenderSheetsRef;
 }) => {
-  const statusCanvasRef = ref<HTMLCanvasElement | null>(null);
-  const activeHorseStatusId = ref<string | null>(null);
-  const statusFrameIndex = ref<number>(0);
-  const statusFrameTimerId = ref<number | null>(null);
-  const statusFrameIntervalMs = 120;
+  const state = createHorseStatusState();
 
   const activeHorseStatus = computed<HorseOption | null>(() => {
     return resolveActiveHorseStatus({
       horseOptions,
-      activeHorseStatusId,
+      activeHorseStatusId: state.activeHorseStatusId,
     });
   });
 
   const openHorseStatus = createOpenHorseStatus({
-    activeHorseStatusId,
-    statusFrameTimerId,
-    statusFrameIndex,
+    activeHorseStatusId: state.activeHorseStatusId,
+    statusFrameTimerId: state.statusFrameTimerId,
+    statusFrameIndex: state.statusFrameIndex,
     activeHorseStatus,
-    statusCanvasRef,
+    statusCanvasRef: state.statusCanvasRef,
     renderSheets,
-    statusFrameIntervalMs,
+    statusFrameIntervalMs: state.statusFrameIntervalMs,
   });
 
   const closeHorseStatus = createCloseHorseStatus({
-    activeHorseStatusId,
-    statusFrameTimerId,
+    activeHorseStatusId: state.activeHorseStatusId,
+    statusFrameTimerId: state.statusFrameTimerId,
   });
 
   const onStatusDialogModelUpdate = createOnStatusDialogModelUpdate({
@@ -207,14 +304,24 @@ export const useHorseStatusModalService = ({
   });
 
   onBeforeUnmount(() => {
-    stopStatusAnimation({ statusFrameTimerId });
+    stopStatusAnimation({ statusFrameTimerId: state.statusFrameTimerId });
   });
 
   return {
-    statusCanvasRef,
+    statusCanvasRef: state.statusCanvasRef,
     activeHorseStatus,
     openHorseStatus,
     closeHorseStatus,
     onStatusDialogModelUpdate,
+  };
+};
+
+const createHorseStatusState = (): HorseStatusState => {
+  return {
+    statusCanvasRef: ref<HTMLCanvasElement | null>(null),
+    activeHorseStatusId: ref<string | null>(null),
+    statusFrameIndex: ref<number>(0),
+    statusFrameTimerId: ref<number | null>(null),
+    statusFrameIntervalMs: 120,
   };
 };
