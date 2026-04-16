@@ -1,20 +1,23 @@
-name: Storybook Snapshots
+name: Storybook Snapshots Verification
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
+  workflow_run:
+    workflows: ["Storybook Pages"]
+    types: ["completed"]
 
 permissions:
   contents: read
   pages: read
 
 jobs:
-  snapshots:
+  snapshots-verify:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -28,10 +31,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run Storybook snapshot tests
+      - name: Verify deployed Storybook against local snapshots
         env:
-          BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
-        run: yarn test:storybook:snapshots
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: yarn test:storybook:snapshots:deployed-vs-local
 
       - name: Upload Playwright report
         if: always()
