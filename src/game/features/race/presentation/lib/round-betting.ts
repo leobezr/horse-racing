@@ -1,3 +1,4 @@
+import { gameConfig } from '../../../../../config/game.config'
 import type { RaceRoundSummary } from '../../types/horse-race'
 
 export const getRoundWinnerHorseId = ({
@@ -11,6 +12,10 @@ export const getRoundWinnerHorseId = ({
 
   const winner = roundSummary.horseResults[0]
   if (!winner) {
+    return null
+  }
+
+  if ((winner.finishedAtTick ?? Number.POSITIVE_INFINITY) >= gameConfig.simulation.maxTicks) {
     return null
   }
 

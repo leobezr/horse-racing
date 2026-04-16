@@ -5,8 +5,8 @@ describe('getRoundFinishDistanceForTick', () => {
     const finishDistance = getRoundFinishDistanceForTick({
       tickIndex: 120,
       roundSummaries: [
-        { roundNumber: 1, startTick: 0, endTick: 149, horseResults: [] },
-        { roundNumber: 2, startTick: 150, endTick: 299, horseResults: [] },
+        { roundNumber: 1, seedText: 'round-seed-1', startTick: 0, endTick: 149, horseResults: [] },
+        { roundNumber: 2, seedText: 'round-seed-2', startTick: 150, endTick: 299, horseResults: [] },
       ],
       configuredRoundTrackDistances: [1200, 1400],
       fallbackFinishDistance: 2200,
@@ -19,8 +19,8 @@ describe('getRoundFinishDistanceForTick', () => {
     const finishDistance = getRoundFinishDistanceForTick({
       tickIndex: 220,
       roundSummaries: [
-        { roundNumber: 1, startTick: 0, endTick: 149, horseResults: [] },
-        { roundNumber: 2, startTick: 150, endTick: 299, horseResults: [] },
+        { roundNumber: 1, seedText: 'round-seed-1', startTick: 0, endTick: 149, horseResults: [] },
+        { roundNumber: 2, seedText: 'round-seed-2', startTick: 150, endTick: 299, horseResults: [] },
       ],
       configuredRoundTrackDistances: [1200, 1400],
       fallbackFinishDistance: 2200,
@@ -33,7 +33,7 @@ describe('getRoundFinishDistanceForTick', () => {
     const finishDistance = getRoundFinishDistanceForTick({
       tickIndex: 999,
       roundSummaries: [
-        { roundNumber: 1, startTick: 0, endTick: 149, horseResults: [] },
+        { roundNumber: 1, seedText: 'round-seed-1', startTick: 0, endTick: 149, horseResults: [] },
       ],
       configuredRoundTrackDistances: [1200],
       fallbackFinishDistance: 2200,

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { computed, nextTick, onBeforeUnmount, ref } from "vue";
 import { gameConfig } from "../../../../config/game.config";
 import type { ReplayRequest } from "../../../../shared/types/replay-request";
@@ -28,6 +29,11 @@ import {
   createLiveRaceRound,
 } from "./lib/live-race-metrics";
 import {
+  filterHorseIdsToSelectionOptions,
+  getHorseSelectionOptions,
+} from "./lib/horse-selection-options";
+import { getFrameTransitionDecision } from "./lib/frame-transition-decision";
+import {
   getRoundWinnerHorseId,
   getRoundBetTotalStake,
   resolveAutoBetHorseIds,
@@ -46,12 +52,12 @@ const getStatusMessageBeforeSession = ({
   availableCredit: number;
   canPlaceTotalBetAmount: (amount: number) => boolean;
 }): string => {
-  if (selectedHorseIds.length === 0) {
-    return "Click New Race and pick a horse from the modal.";
-  }
-
   if (stakeAmount < 1) {
     return "Pick a chip amount before starting a race.";
+  }
+
+  if (selectedHorseIds.length === 0) {
+    return "Click New Race and pick a horse to bet on.";
   }
 
   const totalStake = getRoundBetTotalStake({
@@ -92,9 +98,11 @@ const getStatusMessageDuringSession = ({
 
   if (!isRaceConcluded) {
     const round = liveRaceRound?.roundNumber ?? 1;
-    const secondsRemaining =
-      liveRaceRound?.roundSecondsRemaining ?? gameConfig.rounds.secondsPerRound;
-    return `Round ${round}/${gameConfig.rounds.count} in progress (${secondsRemaining}s left).`;
+    const resolvedTrackSize =
+      gameConfig.rounds.trackDistances[round - 1] ??
+      gameConfig.rounds.trackDistances[gameConfig.rounds.trackDistances.length - 1] ??
+      0;
+    return `Round ${round}/${gameConfig.rounds.count} ${resolvedTrackSize} meters.`;
   }
 
   const playedRounds = session.race.roundSummaries.length;
@@ -102,9 +110,9 @@ const getStatusMessageDuringSession = ({
     return `Race in progress: round ${playedRounds}/${gameConfig.rounds.count}.`;
   }
 
-  const winner = session.horses.find(
-    (horse) => {return horse.id === session.race.winnerId},
-  );
+  const winner = session.horses.find((horse) => {
+    return horse.id === session.race.winnerId;
+  });
   if (!winner) {
     return "Race completed with no winner.";
   }
@@ -156,6 +164,7 @@ export const useHorseRaceCanvas = ({
   const isBetweenRoundsTransitioning = ref<boolean>(false);
   const resolvedRoundCount = ref<number>(0);
   const roundBetHorseIds = ref<string[]>([]);
+  const roundBetHorseIdsByRound = ref<Record<number, string[]>>({});
   const roundBetStakeAmount = ref<number>(0);
   const reservedRoundStakeAmount = ref<number>(0);
   const liveRaceRound = ref<LiveRaceRound | null>(null);
@@ -185,13 +194,28 @@ export const useHorseRaceCanvas = ({
   const previewRenderSheets = ref<Record<string, HTMLCanvasElement[]>>({});
   const chipValues = gameConfig.betting.chipValues;
 
-  const poolHorses = computed<HorseOption[]>(() =>
-    {return previewHorses.value.slice(0, gameConfig.raceHorseCount)},
-  );
-  const renderSheets = computed(() => {return previewRenderSheets.value});
-  const showPreRaceCountdown = computed<boolean>(
-    () => {return preRaceCountdownValue.value !== null},
-  );
+  const poolHorses = computed<HorseOption[]>(() => {
+    return getHorseSelectionOptions({
+      previewHorses: previewHorses.value,
+      activeRaceHorses: raceSession.value?.horses ?? [],
+      isRaceConcluded: isRaceConcluded.value,
+    });
+  });
+  const renderSheets = computed(() => {
+    return previewRenderSheets.value;
+  });
+  const showPreRaceCountdown = computed<boolean>(() => {
+    return preRaceCountdownValue.value !== null;
+  });
+  const loggedRoundSummaries = computed(() => {
+    const summaries = raceSession.value?.race.roundSummaries ?? [];
+    let resolvedCount = resolvedRoundCount.value;
+    if (isRaceConcluded.value) {
+      resolvedCount = summaries.length;
+    }
+
+    return summaries.slice(0, resolvedCount).reverse();
+  });
 
   const statusMessage = computed<string>(() => {
     if (!raceSession.value) {
@@ -265,6 +289,8 @@ export const useHorseRaceCanvas = ({
       snapshotByHorseId,
       finishDistance: raceFinishDistance,
       tickIndex,
+      raceSnapshots: session.race.raceSnapshots,
+      roundSummaries: session.race.roundSummaries,
     });
   };
 
@@ -274,7 +300,9 @@ export const useHorseRaceCanvas = ({
   }: {
     tickIndex: number;
     snapshotCount: number;
-  }): boolean => {return tickIndex < snapshotCount - 1};
+  }): boolean => {
+    return tickIndex < snapshotCount - 1;
+  };
 
   const queueNextAnimationFrame = (): void => {
     animationFrameId.value = window.requestAnimationFrame(renderCurrentFrame);
@@ -319,6 +347,10 @@ export const useHorseRaceCanvas = ({
       fallbackHorseId: selectedHorseId.value,
     });
     const selectedBetStakeAmount = roundBetStakeAmount.value;
+    roundBetHorseIdsByRound.value = {
+      ...roundBetHorseIdsByRound.value,
+      [roundNumber]: [...selectedBetHorseIds],
+    };
 
     if (selectedBetHorseIds.length === 0 || selectedBetStakeAmount < 1) {
       return;
@@ -331,9 +363,9 @@ export const useHorseRaceCanvas = ({
     profileBetsStore.releaseReservedBetAmount(totalStake);
 
     for (const selectedBetHorseId of selectedBetHorseIds) {
-      const selectedHorse = session.horses.find(
-        (horse) => {return horse.id === selectedBetHorseId},
-      );
+      const selectedHorse = session.horses.find((horse) => {
+        return horse.id === selectedBetHorseId;
+      });
       if (!selectedHorse) {
         continue;
       }
@@ -518,7 +550,9 @@ export const useHorseRaceCanvas = ({
     );
     const snapshot = session.race.raceSnapshots[tickIndex] ?? [];
     const snapshotByHorseId = new Map(
-      snapshot.map((entry) => {return [entry.id, entry.distance]}),
+      snapshot.map((entry) => {
+        return [entry.id, entry.distance];
+      }),
     );
     const raceFinishDistance = getRoundFinishDistanceForTick({
       tickIndex,
@@ -535,25 +569,15 @@ export const useHorseRaceCanvas = ({
     });
 
     const nextRoundNumber = resolvedRoundCount.value + 1;
-    const nextRoundSummary = session.race.roundSummaries[nextRoundNumber - 1];
-    const shouldPauseForHalftime =
-      !isBetweenRoundsTransitioning.value &&
-      !isAwaitingBetweenRoundsBet.value &&
-      Boolean(nextRoundSummary) &&
-      tickIndex >= (nextRoundSummary?.endTick ?? Number.MAX_SAFE_INTEGER) &&
-      nextRoundNumber < gameConfig.rounds.count;
-
-    if (shouldPauseForHalftime) {
-      void handleRoundBoundaryTransition({
-        session,
-        tickIndex,
-      });
-      return;
-    }
-
-    if (isBetweenRoundsTransitioning.value || isAwaitingBetweenRoundsBet.value) {
-      return;
-    }
+    const nextRoundSummary = session.race.roundSummaries[nextRoundNumber - 1] ?? null;
+    const transitionDecision = getFrameTransitionDecision({
+      tickIndex,
+      nextRoundEndTick: nextRoundSummary?.endTick ?? null,
+      nextRoundNumber,
+      roundCount: gameConfig.rounds.count,
+      isBetweenRoundsTransitioning: isBetweenRoundsTransitioning.value,
+      isAwaitingBetweenRoundsBet: isAwaitingBetweenRoundsBet.value,
+    });
 
     renderSessionFrame({
       context,
@@ -564,6 +588,18 @@ export const useHorseRaceCanvas = ({
       raceFinishDistance,
       highlightedHorseIds: new Set(roundBetHorseIds.value),
     });
+
+    if (transitionDecision === "render_and_pause") {
+      void handleRoundBoundaryTransition({
+        session,
+        tickIndex,
+      });
+      return;
+    }
+
+    if (transitionDecision === "skip") {
+      return;
+    }
 
     const hasNextFrame = shouldAnimateNextFrame({
       tickIndex,
@@ -594,7 +630,12 @@ export const useHorseRaceCanvas = ({
   }: {
     selectedHorseIds: string[];
   }): boolean => {
-    if (selectedHorseIds.length === 0) {
+    const resolvedHorseIds = filterHorseIdsToSelectionOptions({
+      horseIds: selectedHorseIds,
+      horseOptions: poolHorses.value,
+    });
+
+    if (resolvedHorseIds.length === 0) {
       return false;
     }
 
@@ -603,7 +644,7 @@ export const useHorseRaceCanvas = ({
     }
 
     const totalStake = getRoundBetTotalStake({
-      horseCount: selectedHorseIds.length,
+      horseCount: resolvedHorseIds.length,
       stakePerHorse: stakeAmount.value,
     });
 
@@ -629,6 +670,7 @@ export const useHorseRaceCanvas = ({
     isBetweenRoundsTransitioning.value = false;
     resolvedRoundCount.value = 0;
     roundBetHorseIds.value = [...selectedHorseIds];
+    roundBetHorseIdsByRound.value = {};
     roundBetStakeAmount.value = stakeAmount.value;
     selectedHorseId.value = selectedHorseInput;
     liveRaceRound.value = null;
@@ -645,11 +687,17 @@ export const useHorseRaceCanvas = ({
   const buildSession = async (
     selectedHorseIdsOverride?: string[],
   ): Promise<void> => {
-    const selectedHorseIds =
-      selectedHorseIdsOverride && selectedHorseIdsOverride.length > 0? [...selectedHorseIdsOverride]: resolveAutoBetHorseIds({
-            previousHorseIds: roundBetHorseIds.value,
-            fallbackHorseId: selectedHorseId.value,
-          });
+    let selectedHorseIds = resolveAutoBetHorseIds({
+      previousHorseIds: roundBetHorseIds.value,
+      fallbackHorseId: selectedHorseId.value,
+    });
+    if (selectedHorseIdsOverride && selectedHorseIdsOverride.length > 0) {
+      selectedHorseIds = [...selectedHorseIdsOverride];
+    }
+    selectedHorseIds = filterHorseIdsToSelectionOptions({
+      horseIds: selectedHorseIds,
+      horseOptions: poolHorses.value,
+    });
     const selectedHorseInput = selectedHorseIds[0] ?? null;
 
     if (!canBuildSession({ selectedHorseIds }) || selectedHorseInput === null) {
@@ -661,12 +709,20 @@ export const useHorseRaceCanvas = ({
 
     try {
       const buildResult = await buildRaceSessionData({
+        selectedHorseIdsOverride: selectedHorseIds,
         selectedHorseIdOverride: selectedHorseInput,
         selectedHorseId: selectedHorseId.value,
+        selectedHorseIds: roundBetHorseIds.value,
         stakeAmount: stakeAmount.value,
         canPlaceBetAmount: profileBetsStore.canPlaceBetAmount,
         poolSeed: poolSeed.value,
-        poolHorseIds: poolHorses.value.map((horse) => {return horse.id}),
+        poolHorseIds: previewHorses.value.map((horse) => {
+          return horse.id;
+        }),
+        horsePool: previewHorses.value,
+        previousRaceHorseIds: raceSession.value?.horses.map((horse) => {
+          return horse.id;
+        }) ?? [],
         consumeReplayRequest: raceReplayStore.consumeReplayRequest,
       });
 
@@ -719,33 +775,40 @@ export const useHorseRaceCanvas = ({
       selectedHorseId.value = horseId;
     },
     selectHorseIds: (horseIds: string[]): void => {
-      roundBetHorseIds.value = [...horseIds];
-      selectedHorseId.value = horseIds[0] ?? null;
+      const selectedIds = filterHorseIdsToSelectionOptions({
+        horseIds,
+        horseOptions: poolHorses.value,
+      });
+      roundBetHorseIds.value = selectedIds;
+      selectedHorseId.value = selectedIds[0] ?? null;
     },
-    availableCredit: computed(() => {return profileBetsStore.availableCredit}),
+    availableCredit: computed(() => {
+      return profileBetsStore.availableCredit;
+    }),
     stakeAmount,
     chipValues,
     selectChipAmount: (amount: number): void => {
       stakeAmount.value = amount;
     },
-    canAffordChip: (amount: number): boolean =>
-      {return profileBetsStore.canPlaceBetAmount(
+    canAffordChip: (amount: number): boolean => {
+      return profileBetsStore.canPlaceBetAmount(
         getRoundBetTotalStake({
           horseCount: Math.max(1, roundBetHorseIds.value.length),
           stakePerHorse: amount,
         }),
-      )},
-    canStartRace: computed(
-      () =>
-        {return poolHorses.value.length > 0 &&
+      );
+    },
+    canStartRace: computed(() => {
+      return (
+        poolHorses.value.length > 0 &&
         stakeAmount.value >= 1 &&
-        profileBetsStore.canPlaceBetAmount(stakeAmount.value)},
-    ),
+        profileBetsStore.canPlaceBetAmount(stakeAmount.value)
+      );
+    }),
     horseOptions: poolHorses,
     renderSheets,
-    raceRoundSummaries: computed(() =>
-      {return isRaceConcluded.value? (raceSession.value?.race.roundSummaries ?? []): []},
-    ),
+    raceRoundSummaries: loggedRoundSummaries,
+    roundBetHorseIdsByRound,
     liveRaceRound,
     liveHorseProgress,
     isAwaitingBetweenRoundsBet,

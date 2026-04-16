@@ -56,6 +56,7 @@ describe('getRoundWinnerHorseId', () => {
     const winnerId = getRoundWinnerHorseId({
       roundSummary: {
         roundNumber: 1,
+        seedText: 'round-seed-1',
         startTick: 0,
         endTick: 149,
         horseResults: [
@@ -65,6 +66,7 @@ describe('getRoundWinnerHorseId', () => {
             laneNumber: 2,
             roundDistance: 1200,
             totalDistance: 1200,
+            finishedAtTick: 120,
             averageTickSpeed: 8,
             sprintCount: 1,
           },
@@ -78,6 +80,31 @@ describe('getRoundWinnerHorseId', () => {
   it('returns null when summary is missing', () => {
     const winnerId = getRoundWinnerHorseId({
       roundSummary: undefined,
+    })
+
+    expect(winnerId).toBeNull()
+  })
+
+  it('returns null when first horse did not finish within race runtime', () => {
+    const winnerId = getRoundWinnerHorseId({
+      roundSummary: {
+        roundNumber: 1,
+        seedText: 'round-seed-1',
+        startTick: 0,
+        endTick: 149,
+        horseResults: [
+          {
+            id: 'horse-2',
+            name: 'No Finish Winner',
+            laneNumber: 2,
+            roundDistance: 1100,
+            totalDistance: 1100,
+            finishedAtTick: null,
+            averageTickSpeed: 7.3,
+            sprintCount: 1,
+          },
+        ],
+      },
     })
 
     expect(winnerId).toBeNull()

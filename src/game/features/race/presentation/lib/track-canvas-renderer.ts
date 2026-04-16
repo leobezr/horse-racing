@@ -14,10 +14,42 @@ const podiumLaneColors = [
 export const getPodiumLaneMap = ({
   session,
   snapshotByHorseId,
+  tickIndex,
+  raceFinishDistance,
 }: {
   session: RaceSession
   snapshotByHorseId: Map<string, number>
+  tickIndex: number
+  raceFinishDistance: number
 }): Map<number, number> => {
+  const activeRoundSummary = session.race.roundSummaries.find((roundSummary) => {
+    return tickIndex >= roundSummary.startTick && tickIndex <= roundSummary.endTick
+  })
+  const roundStartTick = activeRoundSummary?.startTick ?? 0
+  const roundEndTick = Math.min(
+    tickIndex,
+    activeRoundSummary?.endTick ?? tickIndex,
+  )
+  const finishTickByHorseId = new Map<string, number>()
+
+  for (const horse of session.horses) {
+    for (
+      let snapshotIndex = roundStartTick;
+      snapshotIndex <= roundEndTick;
+      snapshotIndex += 1
+    ) {
+      const snapshot = session.race.raceSnapshots[snapshotIndex] ?? []
+      const horseSnapshot = snapshot.find((entry) => {
+        return entry.id === horse.id
+      })
+      const horseDistance = horseSnapshot?.distance ?? 0
+      if (horseDistance >= raceFinishDistance) {
+        finishTickByHorseId.set(horse.id, snapshotIndex)
+        break
+      }
+    }
+  }
+
   const orderedByDistance = [...session.horses].sort((left, right) => {
     const leftDistance = snapshotByHorseId.get(left.id) ?? 0
     const rightDistance = snapshotByHorseId.get(right.id) ?? 0
@@ -26,8 +58,8 @@ export const getPodiumLaneMap = ({
       return rightDistance - leftDistance
     }
 
-    const leftFinishedAtTick = left.metadata.finishedAtTick ?? Number.MAX_SAFE_INTEGER
-    const rightFinishedAtTick = right.metadata.finishedAtTick ?? Number.MAX_SAFE_INTEGER
+    const leftFinishedAtTick = finishTickByHorseId.get(left.id) ?? Number.MAX_SAFE_INTEGER
+    const rightFinishedAtTick = finishTickByHorseId.get(right.id) ?? Number.MAX_SAFE_INTEGER
     if (leftFinishedAtTick !== rightFinishedAtTick) {
       return leftFinishedAtTick - rightFinishedAtTick
     }
@@ -356,6 +388,8 @@ export const createTrackCanvasRenderer = ({
     const livePodiumLaneMap = getPodiumLaneMap({
       session,
       snapshotByHorseId,
+      tickIndex,
+      raceFinishDistance: activeRoundFinishDistance,
     })
     const finalPodiumLaneMap = getFinalPodiumLaneMap(session)
 

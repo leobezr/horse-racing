@@ -8,25 +8,49 @@ import type {
 const getSelectedHorseInput = (input: BuildRaceSessionInput): string | null =>
   {return input.selectedHorseIdOverride ?? input.selectedHorseId};
 
+const getSelectedHorseIdsInput = (input: BuildRaceSessionInput): string[] => {
+  if (input.selectedHorseIdsOverride && input.selectedHorseIdsOverride.length > 0) {
+    return [...input.selectedHorseIdsOverride]
+  }
+
+  if (input.selectedHorseIds.length > 0) {
+    return [...input.selectedHorseIds]
+  }
+
+  if (input.selectedHorseId) {
+    return [input.selectedHorseId]
+  }
+
+  return []
+}
+
 const canBuildRaceSession = (input: BuildRaceSessionInput): boolean => {
+  const selectedHorseIdsInput = getSelectedHorseIdsInput(input)
+  if (selectedHorseIdsInput.length === 0) {
+    return false
+  }
+
   if (input.stakeAmount < 1) {
     return false;
   }
 
-  return input.canPlaceBetAmount(input.stakeAmount);
+  return input.canPlaceBetAmount(input.stakeAmount * selectedHorseIdsInput.length);
 };
 
 const getSelectedHorseForRace = ({
   input,
+  selectedHorseIdsInput,
   replaySelectedHorseId,
 }: {
   input: BuildRaceSessionInput;
+  selectedHorseIdsInput: string[];
   replaySelectedHorseId: string | null | undefined;
 }): string | null => {
-  const fallbackHorseId = input.poolHorseIds[0] ?? null;
+  const fallbackHorseId = selectedHorseIdsInput[0] ?? input.poolHorseIds[0] ?? null;
   return (
-    input.selectedHorseIdOverride ??
+    selectedHorseIdsInput[0] ??
     replaySelectedHorseId ??
+    input.selectedHorseIdOverride ??
     input.selectedHorseId ??
     fallbackHorseId
   );
@@ -46,8 +70,9 @@ export const createRaceSessionBuilder = (): {
   const buildRaceSession = async (
     input: BuildRaceSessionInput,
   ): Promise<BuildRaceSessionOutput | null> => {
+    const selectedHorseIdsInput = getSelectedHorseIdsInput(input)
     const selectedHorseInput = getSelectedHorseInput(input);
-    if (selectedHorseInput === null) {
+    if (selectedHorseInput === null || selectedHorseIdsInput.length === 0) {
       return null;
     }
 
@@ -59,6 +84,7 @@ export const createRaceSessionBuilder = (): {
     const currentSeed = replayRequest?.seedText ?? input.poolSeed;
     const selectedHorseForRace = getSelectedHorseForRace({
       input,
+      selectedHorseIdsInput,
       replaySelectedHorseId: replayRequest?.selectedHorseId,
     });
 
@@ -69,6 +95,9 @@ export const createRaceSessionBuilder = (): {
     const nextSession = await createRaceSession({
       seedInput: currentSeed,
       selectedHorseId: selectedHorseForRace,
+      selectedHorseIds: selectedHorseIdsInput,
+      horsePool: input.horsePool,
+      previousRaceHorseIds: input.previousRaceHorseIds,
     });
 
     return {
