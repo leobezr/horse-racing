@@ -5,14 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/leobezr/horse-racing/actions/workflows/pr-validation.yml">
-    <img src="https://github.com/leobezr/horse-racing/actions/workflows/pr-validation.yml/badge.svg" alt="PR Validation" />
-  </a>
   <a href="https://github.com/leobezr/horse-racing/actions/workflows/app-pages.yml">
     <img src="https://github.com/leobezr/horse-racing/actions/workflows/app-pages.yml/badge.svg" alt="App Pages" />
-  </a>
-  <a href="https://github.com/leobezr/horse-racing/actions/workflows/storybook-snapshots.yml">
-    <img src="https://github.com/leobezr/horse-racing/actions/workflows/storybook-snapshots.yml/badge.svg" alt="Storybook Snapshot Validation" />
   </a>
   <img src="https://img.shields.io/badge/Vue-3.5-42b883?logo=vue.js&logoColor=white" alt="Vue 3" />
   <img src="https://img.shields.io/badge/Vite-8.0-646cff?logo=vite&logoColor=white" alt="Vite" />
